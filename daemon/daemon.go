@@ -3,6 +3,7 @@ package daemon
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
@@ -20,7 +21,6 @@ type Config struct {
 	Logger *zap.SugaredLogger
 	MQTTAddress string
 	Prefix string
-
 }
 
 func New(cfg Config) (*Daemon, error) {
@@ -42,7 +42,19 @@ func New(cfg Config) (*Daemon, error) {
 		return nil,err
 	}
 	d.node.SetTransport(tr)
-	go d.heartbeat(time.Second * 10)
+	go d.heartbeat(time.Minute)
+	ch, err := d.node.GetEventsCh(d.prefix + "/puppet/#")
+	if err != nil {
+		return nil, err
+	}
+	pu,err  := puppet.New(puppet.Config{
+		Logger:d.l,
+		Node:d.node,
+	})
+	if err != nil {
+		return nil, err
+	}
+	go pu.StartServer(ch)
 	return &d,nil
 }
 
@@ -53,14 +65,14 @@ func(d *Daemon) heartbeat(interval time.Duration) {
 	for {
 		ev := d.node.NewHeartbeat()
 		ev.RetainTill = time.Now().Add(interval * 3)
-
 		err := d.node.SendEvent(d.prefix + "/heartbeat/" + d.fqdn,ev)
 		if err != nil {
 			d.l.Warnf("could not send heartbeat: %s")
 		}
-		d.l.Infof("HB sent")
+		d.l.Debugf("HB sent")
 		time.Sleep(interval)
 	}
 
 }
+
 
