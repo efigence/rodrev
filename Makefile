@@ -8,7 +8,7 @@ all:
 
 static:
 	go build -ldflags "-X main.version=$(version) -extldflags \"-static\"" -o rv.static cmd/rv/*.go
-	go build -ldflags "-X main.version=$(version) -extldflags \"-static\"" -o rvd.static rvd.go
+	go build -ldflags "-X main.version=$(version) -extldflags \"-static\"" -o rvd.static cmd/rvd/*.go
 
 arm:
 	GOARCH=arm go build  -ldflags "-X main.version=$(version) -extldflags \"-static\"" -o rv.arm cmd/rv/*.go

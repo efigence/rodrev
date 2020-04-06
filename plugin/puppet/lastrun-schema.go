@@ -41,12 +41,12 @@ type LastRunVersion struct {
 	Puppet string `yaml:"puppet"`
 }
 
-func ParseLastRunSummary(r io.Reader) (*LastRunSummary, error) {
+func ParseLastRunSummary(r io.Reader) (LastRunSummary, error) {
 	s := LastRunSummary{}
 	err := yaml.NewDecoder(r).Decode(&s)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing puppet summary: %s", err)
+		return LastRunSummary{}, fmt.Errorf("error parsing puppet summary: %s", err)
 	}
-	return &s,nil
+	return s,nil
 
 }

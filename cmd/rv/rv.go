@@ -3,13 +3,12 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
+	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/urfave/cli"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -71,6 +70,10 @@ func main() {
 			Usage:  "URL for the MQ server. Use tls:// to enable encryption",
 			EnvVar: "RF_MQTT_URL",
 		},
+		cli.BoolFlag{
+				Name: "service-discovery",
+				Usage: "dump service discovery",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		if c.Bool("help") {
@@ -93,50 +96,39 @@ func main() {
 			log.Panicf("can't connect: %s",err)
 		}
 		node.SetTransport(tr)
-		ch, err := node.GetEventsCh("rf/heartbeat/#")
-		if err != nil {
-			log.Panicf("can't connect: %s",err)
-		}
-		services := make(map[string]map[string]bool,0)
-		totalDiscoveryTime := time.After(time.Second * 30)
-		exit := false
-		log.Info("running service discovery")
-		for {
-			if exit {break}
-			select {
-			case ev := <-ch:
-				path := strings.Split(ev.RoutingKey, "/")
-				if len(path) < 2 {
-					log.Errorf("path too short: %s", ev.RoutingKey)
-				}
-				fqdn := path[len(path)-1]
 
-				var hb zerosvc.Heartbeat
-				err := json.Unmarshal(ev.Body, &hb)
+		if c.Bool("service-discovery") {
+			log.Info("running service discovery")
+			ServiceDiscovery(node)
+		}
+		rspCh, _ := node.GetEventsCh("rf/reply/12345")
+		query := node.NewEvent()
+		query.Marshal(&puppet.PuppetCmd{Command:puppet.Status})
+		query.ReplyTo = "rf/reply/12345"
+		log.Info("sending command")
+		err = query.Send("rf/puppet/12345")
+		if err != nil {
+			log.Errorf("err sending: %s", err)
+		}
+		log.Info("waiting 4s for response")
+		go func() {
+			for ev := range rspCh {
+				var summary puppet.LastRunSummary
+				err := ev.Unmarshal(&summary)
 				if err != nil {
-					log.Errorf("error unmarshalling %s: %s", string(ev.Body), err)
+					log.Errorf("error decoding message: %s", err)
 					continue
 				}
-				for k, _ := range hb.Services {
-					if _, ok := services[k]; !ok {
-						services[k] = make(map[string]bool)
-						services[k][fqdn] = true
-					}
-				}
-				log.Infof("HB: %+v|%s", hb)
-			case <-time.After(4 * time.Second):
-					exit = true
-			case <- totalDiscoveryTime:
-				exit = true
-			}
-		}
-		for svc, hosts := range services {
-			log.Infof("%s:",svc)
-			for host, _ := range hosts {
-				log.Infof("    %s",host)
-			}
-		}
 
+				log.Infof("%s: %s, changes: %d/%d",
+					ev.NodeName(),
+					summary.Version.Config,
+					summary.Resources.Changed,
+					summary.Resources.Total,
+				)
+			}
+		}()
+		time.Sleep(time.Second * 4)
 		return nil
 	}
 	app.Commands = []cli.Command{
