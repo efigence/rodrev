@@ -26,7 +26,7 @@ type Config struct {
 func New(cfg Config) (*Daemon, error) {
 	var d Daemon
 	tr := zerosvc.NewTransport(zerosvc.TransportMQTT,cfg.MQTTAddress,zerosvc.TransportMQTTConfig{})
-	d.prefix = "rf/"
+	d.prefix = "rv/"
 	d.fqdn = util.GetFQDN()
 	d.l = cfg.Logger
 	rn := make([]byte,4)

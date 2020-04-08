@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"log"
@@ -18,7 +19,7 @@ type Runtime struct {
 // GetReplyChan() returns randomly generated channel for replies
 func (r *Runtime)GetReplyChan() (path string, replyCh chan zerosvc.Event,err error) {
 	id := MapBytesToTopicTitle(r.RngBlob(16))
-	path = r.MQPrefix + "reply/" + id
+	path = r.MQPrefix + "reply/" + util.GetFQDN() + "/" + id
 	rspCh, err :=  r.Node.GetEventsCh(path + "/#")
 	return path, rspCh,err
 }
