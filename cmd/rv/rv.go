@@ -3,13 +3,14 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/efigence/rodrev/plugin/puppet"
+	"github.com/efigence/rodrev/client"
+	"github.com/efigence/rodrev/common"
 	"github.com/urfave/cli"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
-	"time"
+	"sort"
 )
 
 var version string
@@ -71,8 +72,12 @@ func main() {
 			EnvVar: "RF_MQTT_URL",
 		},
 		cli.BoolFlag{
-				Name: "service-discovery",
-				Usage: "dump service discovery",
+			Name: "service-discovery",
+			Usage: "dump service discovery",
+		},
+		cli.BoolFlag{
+			Name: "status-map",
+			Usage: "puppet status",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
@@ -97,38 +102,37 @@ func main() {
 		}
 		node.SetTransport(tr)
 
+		runtime := common.Runtime{
+			Node:     node,
+			MQPrefix: "rf/",
+			Log:      log,
+		}
+
 		if c.Bool("service-discovery") {
 			log.Info("running service discovery")
-			ServiceDiscovery(node)
-		}
-		rspCh, _ := node.GetEventsCh("rf/reply/12345")
-		query := node.NewEvent()
-		query.Marshal(&puppet.PuppetCmd{Command:puppet.Status})
-		query.ReplyTo = "rf/reply/12345"
-		log.Info("sending command")
-		err = query.Send("rf/puppet/12345")
-		if err != nil {
-			log.Errorf("err sending: %s", err)
-		}
-		log.Info("waiting 4s for response")
-		go func() {
-			for ev := range rspCh {
-				var summary puppet.LastRunSummary
-				err := ev.Unmarshal(&summary)
-				if err != nil {
-					log.Errorf("error decoding message: %s", err)
-					continue
-				}
-
-				log.Infof("%s: %s, changes: %d/%d",
-					ev.NodeName(),
-					summary.Version.Config,
-					summary.Resources.Changed,
-					summary.Resources.Total,
-				)
+			services, nodesActive, nodesStale, err := client.Discover(&runtime)
+			if err != nil {
+				log.Errorf("error running discovery: %s", err)
 			}
-		}()
-		time.Sleep(time.Second * 4)
+			log.Infof("services:")
+			for service, nodes := range services {
+				log.Infof("  %s:", service)
+				sort.Slice(nodes, func(i, j int) bool { return nodes[i].FQDN < nodes[j].FQDN })
+				for  _, node := range  nodes {
+					log.Infof("    %s:",node.FQDN)
+				}
+			}
+			_ = nodesActive // not uset yet
+			for name, node := range nodesStale {
+				log.Warnf("node %s is stale: %+v", name, node)
+			}
+		}
+		if c.Bool("status-map") {
+			log.Info("puppet status")
+			client.PuppetStatus(&runtime)
+		}
+
+
 		return nil
 	}
 	app.Commands = []cli.Command{

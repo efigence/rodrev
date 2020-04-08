@@ -37,10 +37,18 @@ func setupLogger() {
 	lowPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl < zapcore.ErrorLevel
 	})
-	core := zapcore.NewTee(
-		zapcore.NewCore(consoleEncoder, os.Stderr, lowPriority),
-		zapcore.NewCore(consoleEncoder, os.Stderr, highPriority),
-	)
+	infoPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.InfoLevel
+	})
+	var core zapcore.Core
+	if debug {
+		core = zapcore.NewTee(
+			zapcore.NewCore(consoleEncoder, os.Stderr, lowPriority),
+			zapcore.NewCore(consoleEncoder, os.Stderr, highPriority),
+		)
+	} else {
+		core = zapcore.NewCore(consoleEncoder, os.Stderr, infoPriority)
+	}
 	logger := zap.New(core)
 	if debug {
 		logger = logger.WithOptions(
@@ -59,13 +67,13 @@ func setupLogger() {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "vpd"
+	app.Name = "rvd"
 	app.Description = "Rodrev server"
 	app.Version = version
 	app.HideHelp = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "help, h", Usage: "show help"},
-		cli.BoolFlag{Name: "debug d", Usage: "debug"},
+		cli.BoolFlag{Name: "debug, d", Usage: "debug"},
 		cli.StringFlag{
 			Name:   "mqtt-url",
 			Value:  "tcp://mqtt:mqtt@127.0.0.1:1883",

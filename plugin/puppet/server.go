@@ -9,20 +9,23 @@ import (
 import "time"
 
 
-func (p *Puppet) StartServer(evCh chan zerosvc.Event) {
+func (p *Puppet) StartServer() {
 	go p.backgroundWorker()
-	go func() {
-		for ev := range evCh {
-			err := p.HandleEvent(&ev)
-			if err != nil {
-				p.l.Errorf("Error handling puppet event: %s", err)
-			}
+}
+
+func(p *Puppet)EventListener(evCh chan zerosvc.Event) error{
+	for ev := range evCh {
+		err := p.HandleEvent(&ev)
+		if err != nil {
+			p.l.Errorf("Error handling puppet event: %s:%+v", err,&ev)
 		}
-	}()
+	}
+	return fmt.Errorf("channel for puppet server disconnected")
 }
 
 func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	var cmd PuppetCmd
+
 	err := ev.Unmarshal(&cmd)
 	if err!=nil {
 		return p.puppetErr(err)
