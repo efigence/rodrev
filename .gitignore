@@ -49,7 +49,7 @@ _testmain.go
 *.arm
 *.arm64
 *.386
-
+*.pem
 
 # local test data
 

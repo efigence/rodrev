@@ -26,7 +26,7 @@ type Config struct {
 func New(cfg Config) (*Daemon, error) {
 	var d Daemon
 	tr := zerosvc.NewTransport(zerosvc.TransportMQTT,cfg.MQTTAddress,zerosvc.TransportMQTTConfig{})
-	d.prefix = "rf"
+	d.prefix = "rf/"
 	d.fqdn = util.GetFQDN()
 	d.l = cfg.Logger
 	rn := make([]byte,4)
@@ -43,10 +43,7 @@ func New(cfg Config) (*Daemon, error) {
 	}
 	d.node.SetTransport(tr)
 	go d.heartbeat(time.Minute)
-	ch, err := d.node.GetEventsCh(d.prefix + "/puppet/#")
-	if err != nil {
-		return nil, err
-	}
+
 	pu,err  := puppet.New(puppet.Config{
 		Logger:d.l,
 		Node:d.node,
@@ -54,7 +51,20 @@ func New(cfg Config) (*Daemon, error) {
 	if err != nil {
 		return nil, err
 	}
-	go pu.StartServer(ch)
+	pu.StartServer()
+	go func() {
+		for {
+			ch, err := d.node.GetEventsCh(d.prefix + "puppet/#")
+			if err != nil {
+				d.l.Errorf("error connecting to channel: %s",err)
+				time.Sleep(time.Second * 10)
+				continue
+			}
+			err = pu.EventListener(ch)
+			d.l.Errorf("plugin puppet exited: %s, reconnecting in 10s",err)
+			time.Sleep(time.Second * 10)
+		}
+	}()
 	return &d,nil
 }
 
@@ -64,12 +74,14 @@ func(d *Daemon) heartbeat(interval time.Duration) {
 	}
 	for {
 		ev := d.node.NewHeartbeat()
-		ev.RetainTill = time.Now().Add(interval * 3)
-		err := d.node.SendEvent(d.prefix + "/heartbeat/" + d.fqdn,ev)
+		t := time.Now().Add(interval * 3)
+		ev.RetainTill = &t
+		hbPath := d.prefix + "heartbeat/" + d.fqdn
+		err := d.node.SendEvent(hbPath,ev)
 		if err != nil {
 			d.l.Warnf("could not send heartbeat: %s")
 		}
-		d.l.Debugf("HB sent")
+		d.l.Debugf("HB sent to %s", hbPath)
 		time.Sleep(interval)
 	}
 
