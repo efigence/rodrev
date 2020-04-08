@@ -104,7 +104,7 @@ func main() {
 
 		runtime := common.Runtime{
 			Node:     node,
-			MQPrefix: "rf/",
+			MQPrefix: "rv/",
 			Log:      log,
 		}
 

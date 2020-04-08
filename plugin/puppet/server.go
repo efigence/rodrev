@@ -25,7 +25,6 @@ func(p *Puppet)EventListener(evCh chan zerosvc.Event) error{
 
 func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	var cmd PuppetCmd
-
 	err := ev.Unmarshal(&cmd)
 	if err!=nil {
 		return p.puppetErr(err)
@@ -48,8 +47,6 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
 		ev.Reply(re)
 		p.l.Warnf("unkown command %s",cmd.Command)
-
-
 	}
 	return nil
 }

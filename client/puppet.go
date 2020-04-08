@@ -12,7 +12,7 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
 	}
-
+	defer close(replyCh)
 	query := r.Node.NewEvent()
 	err = query.Marshal(&puppet.PuppetCmd{Command:puppet.Status})
 	if err != nil {
@@ -20,7 +20,7 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	}
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
-	err = query.Send("rf/puppet/1234")
+	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
 	}
@@ -44,5 +44,4 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	}()
 	time.Sleep(time.Second * 4)
 	return statusMap
-
 }
