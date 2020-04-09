@@ -7,38 +7,38 @@ import (
 )
 
 type LastRunSummary struct {
-	Version LastRunVersion `yaml:"version"`
-	Timing LastRunTiming `yaml:"time"`
-	Resources LastRunResources `yaml:"resources"`
-	Events LastRunEvents `yaml:"events"`
+	Version LastRunVersion `yaml:"version" json:"version"`
+	Timing LastRunTiming `yaml:"time" json:"timing"`
+	Resources LastRunResources `yaml:"resources" json:"resources"`
+	Events LastRunEvents `yaml:"events" json:"events"`
 
 }
 
 type LastRunTiming struct {
-	Duration map[string]float64 `yaml:",inline"`
-	LastRun int `yaml:"last_run"`
+	Duration map[string]float64 `yaml:",inline" json:"duration"`
+	LastRun int `yaml:"last_run" json:"last_run_ts"`
 }
 
 type LastRunResources struct {
-    Changed int `yaml:"changed"`
-    CorrectiveChange int `yaml:"corrective_change"`
-    Failed int `yaml:"failed"`
-    FailedToTestart int `yaml:"failed_to_restart"`
-    OutOfSync int `yaml:"out_of_sync"`
-    Restarted int `yaml:"restarted"`
-    Scheduled int `yaml:"scheduled"`
-    Skipped int `yaml:"skipped"`
-    Total int `yaml:"total"`
+    Changed int `yaml:"changed" json:"changed"`
+    CorrectiveChange int `yaml:"corrective_change" json:"corrective_change"`
+    Failed int `yaml:"failed" json:"failed"`
+    FailedToTestart int `yaml:"failed_to_restart" json:"failed_to_restart"`
+    OutOfSync int `yaml:"out_of_sync" json:"out_of_sync"`
+    Restarted int `yaml:"restarted" json:"restarted"`
+    Scheduled int `yaml:"scheduled" json:"scheduled"`
+    Skipped int `yaml:"skipped" json:"skipped"`
+    Total int `yaml:"total" json:"total"`
 }
 
 type LastRunEvents struct {
-    Failure int `yaml:"failure"`
-    Success int `yaml:"success"`
-    Total int `yaml:"total"`
+    Failure int `yaml:"failure" json:"failure"`
+    Success int `yaml:"success" json:"success"`
+    Total int `yaml:"total" json:"total"`
 }
 type LastRunVersion struct {
-	Config string `yaml:"config"`
-	Puppet string `yaml:"puppet"`
+	Config string `yaml:"config" json:"config"`
+	Puppet string `yaml:"puppet" json:"puppet"`
 }
 
 func ParseLastRunSummary(r io.Reader) (LastRunSummary, error) {

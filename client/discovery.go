@@ -47,19 +47,33 @@ func Discover(r *common.Runtime) (
 			_ = fqdn
 
 			var hb zerosvc.Heartbeat
-			var hbNode common.Node
+			hbNode :=  common.Node{
+				Services: make([]string,0),
+			}
 			err := json.Unmarshal(ev.Body, &hb)
 			if err != nil {
 				r.Log.Errorf("error unmarshalling %s: %s", string(ev.Body), err)
 				continue
 			}
-			hbNode.FQDN = ev.NodeName()
-			hbNode.LastUpdate = ev.TS()
+			has := func(key string)  (string,bool) { str, ok := hb.NodeInfo[key].(string); return str, ok }
+			if val, ok := has("fqdn"); ok {
+				hbNode.FQDN =val
+			} else {
+				r.Log.Warnf("node without info data: %s",ev.NodeName())
+				continue
+			}
+			if val, ok := has("version"); ok {
+				hbNode.DaemonVersion = val
+			}
+
+			ts := ev.TS()
+			hbNode.LastUpdate = &ts
 			for k, _ := range hb.Services {
 				if _, ok := serviceMap[k]; !ok {
 					serviceMap[k] = make([]common.Node,0)
 				}
 				serviceMap[k] = append(serviceMap[k],hbNode)
+				hbNode.Services = append(hbNode.Services,k)
 			}
 			if ev.RetainTill.After(time.Now()) {
 				nodesActive[hbNode.FQDN]=hbNode

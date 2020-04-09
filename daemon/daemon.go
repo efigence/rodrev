@@ -2,9 +2,9 @@ package daemon
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/util"
+	uuid "github.com/satori/go.uuid"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"time"
@@ -21,17 +21,23 @@ type Config struct {
 	Logger *zap.SugaredLogger
 	MQTTAddress string
 	Prefix string
+	Version string
 }
 
 func New(cfg Config) (*Daemon, error) {
 	var d Daemon
 	tr := zerosvc.NewTransport(zerosvc.TransportMQTT,cfg.MQTTAddress,zerosvc.TransportMQTTConfig{})
-	d.prefix = "rv/"
+	d.prefix = cfg.Prefix
+	// TODO load from cert
 	d.fqdn = util.GetFQDN()
 	d.l = cfg.Logger
 	rn := make([]byte,4)
     rand.Read(rn)
-	d.node = zerosvc.NewNode("rf-" + d.fqdn + "-" +hex.EncodeToString(rn))
+	// TODO save uuid somewhere
+	d.node = zerosvc.NewNode(d.fqdn,uuid.NewV4().String())
+	d.node.Info["fqdn"] = d.fqdn
+    d.node.Info["version"] = cfg.Version
+
 	d.node.Services["puppet"] = zerosvc.Service{
 		Path:        "puppet",
 		Description: "puppet management",

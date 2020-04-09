@@ -2,21 +2,34 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/hex"
+	"encoding/csv"
+	"encoding/json"
 	"github.com/efigence/rodrev/client"
 	"github.com/efigence/rodrev/common"
+	uuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var version string
 var log *zap.SugaredLogger
 var debug = true
 var exit = make(chan bool, 1)
+
+const (
+	outStderr = "stderr"
+	outCsv = "csv"
+	outJson = "json"
+)
+
 
 func init() {
 	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
@@ -79,6 +92,12 @@ func main() {
 			Name: "status-map",
 			Usage: "puppet status",
 		},
+		cli.StringFlag{
+			Name:  "output-format,o,out",
+			Usage: "Output format: stderr(human readable),csv,json",
+			Value: "stderr",
+		},
+
 	}
 	app.Action = func(c *cli.Context) error {
 		if c.Bool("help") {
@@ -91,11 +110,12 @@ func main() {
 			c.String("mqtt-url"),
 			zerosvc.TransportMQTTConfig{},
 		)
+
 		host,_ := os.Hostname()
 		rn := make([]byte,4)
 		rand.Read(rn)
-		nodename := "rf-client" + host + hex.EncodeToString(rn)
-		node := zerosvc.NewNode(nodename)
+		nodename := "rf-client-" + host
+		node := zerosvc.NewNode(nodename,uuid.NewV4().String())
 		err := tr.Connect()
 		if err != nil {
 			log.Panicf("can't connect: %s",err)
@@ -107,6 +127,14 @@ func main() {
 			MQPrefix: "rv/",
 			Log:      log,
 		}
+		outputMode := c.String("output-format")
+		outputModeRe := regexp.MustCompile(
+			"^" +
+				strings.Join([]string{outCsv,outJson,outStderr},"|") +
+				"$")
+		if !outputModeRe.MatchString(c.String("output-format")) {
+			log.Panicf("output-format [%s] must match %s",outputMode, outputModeRe)
+		}
 
 		if c.Bool("service-discovery") {
 			log.Info("running service discovery")
@@ -115,21 +143,90 @@ func main() {
 				log.Errorf("error running discovery: %s", err)
 			}
 			log.Infof("services:")
-			for service, nodes := range services {
-				log.Infof("  %s:", service)
-				sort.Slice(nodes, func(i, j int) bool { return nodes[i].FQDN < nodes[j].FQDN })
-				for  _, node := range  nodes {
-					log.Infof("    %s:",node.FQDN)
+			switch outputMode {
+			case outStderr:
+				for service, nodes := range services {
+					log.Infof("  %s:", service)
+					sort.Slice(nodes, func(i, j int) bool { return nodes[i].FQDN < nodes[j].FQDN })
+					for _, node := range nodes {
+						log.Infof("    %s:", node.FQDN)
+					}
 				}
-			}
-			_ = nodesActive // not uset yet
-			for name, node := range nodesStale {
-				log.Warnf("node %s is stale: %+v", name, node)
+				for name, node := range nodesStale {
+					log.Warnf("node %s is stale: %+v", name, node)
+				}
+
+			case outCsv:
+				csvW := csv.NewWriter(os.Stdout)
+				csvW.Write([]string{"fqdn", "last_update", "version", "service", "active"})
+				for _, info := range nodesActive {
+					csvW.Write([]string{
+						info.FQDN,
+						info.LastUpdate.Format(time.RFC3339),
+						info.DaemonVersion,
+						strings.Join(info.Services, ","),
+						"1",
+					})
+				}
+				for _, info := range nodesStale {
+					csvW.Write([]string{
+						info.FQDN,
+						info.LastUpdate.Format(time.RFC3339),
+						info.DaemonVersion,
+						strings.Join(info.Services, ","),
+						"0",
+					})
+				}
+				csvW.Flush()
+			case outJson:
+				outJ := make(map[string]interface{}, 0)
+				outJ["services"] = services
+				outJ["nodes_active"] = nodesActive
+				outJ["nodes_stale"] = nodesStale
+				err = json.NewEncoder(os.Stdout).Encode(&outJ)
+				if err != nil {
+					log.Errorf("error encoding node data: %s", err)
+				}
 			}
 		}
 		if c.Bool("status-map") {
-			log.Info("puppet status")
-			client.PuppetStatus(&runtime)
+			status := client.PuppetStatus(&runtime)
+
+			switch outputMode {
+			case outStderr:
+				log.Info("puppet status")
+				for node, summary := range status {
+					log.Infof("%s: %s, changes: %d/%d",
+						node,
+						summary.Version.Config,
+						summary.Resources.Changed,
+		    			summary.Resources.Total,
+					)
+				}
+			case outCsv:
+				csvW := csv.NewWriter(os.Stdout)
+				csvW.Write([]string{"fqdn", "puppet_version", "config_version", "last_run", "changed", "total", "duration"})
+				for node, summary := range status {
+					totalDuration := "0"
+					if v, ok := summary.Timing.Duration["total"]; ok {
+						totalDuration = strconv.FormatFloat(v, 'f', 2, 64)
+					}
+					csvW.Write([]string{
+						node,
+						summary.Version.Puppet,
+						summary.Version.Config,
+						time.Unix(int64(summary.Timing.LastRun), 0).Format(time.RFC3339),
+						strconv.Itoa(summary.Resources.Changed),
+						totalDuration,
+					})
+				}
+				csvW.Flush()
+			case outJson:
+				err = json.NewEncoder(os.Stdout).Encode(&status)
+				if err != nil {
+					log.Errorf("error encoding node data: %s", err)
+				}
+			}
 		}
 
 
