@@ -69,15 +69,15 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "rodrev"
-	app.Description = "rodrev client"
+	app.Usage = "rodrev client"
+	app.Description = "send commands to and read state from daemon"
 	app.Version = version
 	app.HideHelp = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "help, h", Usage: "show help"},
 		cli.StringFlag{
 			Name:   "mqtt-url",
-			Value:  "tcp://mqtt:mqtt@127.0.0.1:1883",
-			Usage:  "URL for the MQ server. Use tls:// to enable encryption",
+			Usage:  "URL for the MQ server. Use tls:// to enable encryption (default: tcp://mqtt:mqtt@127.0.0.1:1883)",
 			EnvVar: "RF_MQTT_URL",
 		},
 		cli.BoolFlag{

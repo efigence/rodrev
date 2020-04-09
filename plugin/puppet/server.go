@@ -73,7 +73,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
 		ev.Reply(re)
-		p.l.Warnf("unkown command %s",cmd.Command)
+		p.l.Warnf("unknown command %s",cmd.Command)
 	}
 	return nil
 }

@@ -57,7 +57,11 @@ func PuppetRun(r *common.Runtime,node string) {
 	query := r.Node.NewEvent()
 	r.UnlikelyErr(query.Marshal(&puppet.PuppetCmd{Command: puppet.Run}))
 	query.ReplyTo = replyPath
-	err = query.Send(r.MQPrefix + "puppet" + "/" + node)
+	if node == "all" {
+		err = query.Send(r.MQPrefix + "puppet")
+	} else {
+		err = query.Send(r.MQPrefix + "puppet" + "/" + node)
+	}
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
 	}

@@ -21,11 +21,13 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 	err := yamlcfg.LoadConfig(cfgFiles, &cfg)
 	if err != nil {
 		// if URL is unset
-		if len(c.String("mqtt-ur")) == 0 {
+		if len(c.String("mqtt-url")) == 0 {
 			log.Errorf("error loading config:", err)
 		}
 	}
 	common.MergeCliConfig(&cfg, c)
+	log.Infof("config: %s",cfg.GetConfigPath())
+
 	tr := zerosvc.NewTransport(
 		zerosvc.TransportMQTT,
 		cfg.MQAddress,
