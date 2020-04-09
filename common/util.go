@@ -12,6 +12,7 @@ func MergeCliConfig(cfg *config.Config,c *cli.Context) {
 	if len(c.GlobalString("mqtt-url")) > 0 {
 		cfg.MQAddress = c.GlobalString("mqtt-url")
 	}
+
 	if len(cfg.MQAddress) == 0 {
 		cfg.MQAddress = "tcp: // mqtt:mqtt@127.0.0.1:1883"
 	}
