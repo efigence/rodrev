@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"crypto/rand"
+	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/util"
 	uuid "github.com/satori/go.uuid"
@@ -48,11 +49,17 @@ func New(cfg Config) (*Daemon, error) {
 		return nil,err
 	}
 	d.node.SetTransport(tr)
+
+	runtime := common.Runtime{
+			Node:     d.node,
+			FQDN: d.fqdn,
+			MQPrefix: cfg.Prefix,
+			Log:      cfg.Logger,
+		}
 	go d.heartbeat(time.Minute)
 
 	pu,err  := puppet.New(puppet.Config{
-		Logger:d.l,
-		Node:d.node,
+		Runtime: runtime,
 	})
 	if err != nil {
 		return nil, err

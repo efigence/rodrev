@@ -1,22 +1,19 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/csv"
 	"encoding/json"
-	"github.com/efigence/rodrev/client"
-	"github.com/efigence/rodrev/common"
-	uuid "github.com/satori/go.uuid"
-	"github.com/urfave/cli"
-	"github.com/zerosvc/go-zerosvc"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/efigence/rodrev/client"
+	"github.com/urfave/cli"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var version string
@@ -26,10 +23,9 @@ var exit = make(chan bool, 1)
 
 const (
 	outStderr = "stderr"
-	outCsv = "csv"
-	outJson = "json"
+	outCsv    = "csv"
+	outJson   = "json"
 )
-
 
 func init() {
 	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
@@ -37,7 +33,7 @@ func init() {
 	// if os.Getenv("INVOCATION_ID") != "" || os.Getenv("JOURNAL_STREAM") != "" {
 	// 	consoleEncoderConfig.TimeKey = ""
 	// }
-	consoleEncoderConfig.TimeKey=""
+	consoleEncoderConfig.TimeKey = ""
 	consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
 	consoleStderr := zapcore.Lock(os.Stderr)
@@ -85,11 +81,11 @@ func main() {
 			EnvVar: "RF_MQTT_URL",
 		},
 		cli.BoolFlag{
-			Name: "service-discovery",
+			Name:  "service-discovery",
 			Usage: "dump service discovery",
 		},
 		cli.BoolFlag{
-			Name: "status-map",
+			Name:  "status-map",
 			Usage: "puppet status",
 		},
 		cli.StringFlag{
@@ -97,43 +93,21 @@ func main() {
 			Usage: "Output format: stderr(human readable),csv,json",
 			Value: "stderr",
 		},
-
 	}
 	app.Action = func(c *cli.Context) error {
 		if c.Bool("help") {
 			cli.ShowAppHelp(c)
 			os.Exit(1)
 		}
-
-		tr := zerosvc.NewTransport(
-			zerosvc.TransportMQTT,
-			c.String("mqtt-url"),
-			zerosvc.TransportMQTTConfig{},
-		)
-
-		host,_ := os.Hostname()
-		rn := make([]byte,4)
-		rand.Read(rn)
-		nodename := "rf-client-" + host
-		node := zerosvc.NewNode(nodename,uuid.NewV4().String())
-		err := tr.Connect()
-		if err != nil {
-			log.Panicf("can't connect: %s",err)
-		}
-		node.SetTransport(tr)
-
-		runtime := common.Runtime{
-			Node:     node,
-			MQPrefix: "rv/",
-			Log:      log,
-		}
+		cfg, runtime := Init(c)
+		_ = cfg
 		outputMode := c.String("output-format")
 		outputModeRe := regexp.MustCompile(
 			"^" +
-				strings.Join([]string{outCsv,outJson,outStderr},"|") +
+				strings.Join([]string{outCsv, outJson, outStderr}, "|") +
 				"$")
 		if !outputModeRe.MatchString(c.String("output-format")) {
-			log.Panicf("output-format [%s] must match %s",outputMode, outputModeRe)
+			log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
 		}
 
 		if c.Bool("service-discovery") {
@@ -200,7 +174,7 @@ func main() {
 						node,
 						summary.Version.Config,
 						summary.Resources.Changed,
-		    			summary.Resources.Total,
+						summary.Resources.Total,
 					)
 				}
 			case outCsv:
@@ -222,23 +196,36 @@ func main() {
 				}
 				csvW.Flush()
 			case outJson:
-				err = json.NewEncoder(os.Stdout).Encode(&status)
+				err := json.NewEncoder(os.Stdout).Encode(&status)
 				if err != nil {
 					log.Errorf("error encoding node data: %s", err)
 				}
 			}
 		}
 
-
 		return nil
 	}
 	app.Commands = []cli.Command{
 		{
-			Name:    "rem",
-			Aliases: []string{"a"},
-			Usage:   "example cmd",
+			Name:    "puppet",
+			Aliases: []string{"p", "pu"},
+			Usage:   "run puppet",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "target",
+					Usage: "node to run puppet on",
+				},
+			},
 			Action: func(c *cli.Context) error {
-				log.Warn("running example cmd")
+				cfg, runtime := Init(c)
+				_ = cfg
+				target :=  c.String("target")
+				if len(target) == 0 {
+					log.Warn("need --target parameter")
+					os.Exit(1)
+				}
+				client.PuppetRun(&runtime,target)
+				log.Warnf("running puppet on %s|%s", c.String("target"), c.GlobalString("mqtt-url"))
 				return nil
 			},
 		},

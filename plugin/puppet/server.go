@@ -5,6 +5,7 @@ import (
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"os"
+	"strings"
 )
 import "time"
 
@@ -34,6 +35,10 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	}
 	re := p.node.NewEvent()
 	re.Headers["fqdn"]=util.GetFQDN()
+	reqPath := strings.Split(ev.RoutingKey,"/")
+	if len(reqPath) < 2 {
+		return fmt.Errorf("too short path, ignoring: %s", ev.RoutingKey)
+	}
 	switch cmd.Command {
 	case Status:
 		p.lock.RLock()
@@ -42,6 +47,28 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		if err != nil {return err}
 		err = ev.Reply(re)
 		if err != nil {return err}
+	case Run:
+		// directed request e.g. puppet/host.example.com
+		p.l.Warnf("path: %+v",reqPath)
+		if (reqPath[len(reqPath)-1] == p.fqdn && reqPath[len(reqPath)-2]=="puppet") || // unicast
+			(reqPath[len(reqPath)-1] == "puppet" && len(reqPath) == 2)  || // broadcast
+			(reqPath[len(reqPath)-1] == "puppet" && reqPath[len(reqPath)-2] != "puppet") { // broadcast
+
+			r:=p.Run()
+			err := re.Marshal(&r)
+			if err !=nil {
+				p.l.Errorf("error marshalling: %s", err)
+				return err
+			}
+			err = ev.Reply(re)
+			if err != nil {return err}
+		} else { // ignore
+			p.l.Debugf("got request for path %s, ignoring as it does  not match",ev.RoutingKey, p.fqdn)
+		}
+
+
+
+
 	default:
 		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})

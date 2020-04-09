@@ -1,17 +1,16 @@
 package main
 
 import (
+	"github.com/XANi/go-yamlcfg"
+	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/daemon"
 	"github.com/efigence/rodrev/util"
-	"github.com/XANi/go-yamlcfg"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/url"
 	"os"
 	"sort"
-	"strings"
 )
 
 var version string
@@ -100,22 +99,8 @@ func main() {
 		} else {
 			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
-		if len(c.String("mqtt-url")) > 0 {
-			cfg.MQAddress = c.String("mqtt-url")
-		}
-		if len(cfg.MQAddress) == 0 {
-			cfg.MQAddress = "tcp: // mqtt:mqtt@127.0.0.1:1883"
-		}
-		if !strings.Contains(cfg.MQAddress,"/?") {
-			cfg.MQAddress = cfg.MQAddress + "/?"
-		}
-
-		if !strings.Contains(cfg.MQAddress,"ca=") && len(cfg.CA) > 0 {
-			cfg.MQAddress = cfg.MQAddress + "&ca=" + url.QueryEscape(cfg.CA)
-		}
-		if !strings.Contains(cfg.MQAddress,"cert=") && len(cfg.ClientCert) > 0 {
-			cfg.MQAddress = cfg.MQAddress + "&cert=" + url.QueryEscape(cfg.ClientCert)
-		}
+		common.MergeCliConfig(&cfg,c)
+		log.Warnf("%+v",cfg)
 
 		debug = c.Bool("debug")
 

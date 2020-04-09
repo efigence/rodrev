@@ -1,8 +1,10 @@
 package common
 
 import (
+	mathrand "math/rand"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
@@ -12,6 +14,7 @@ import (
 
 type Runtime struct {
 	Node *zerosvc.Node
+	FQDN string
 	MQPrefix string
 	Log *zap.SugaredLogger
 }
@@ -38,6 +41,21 @@ func (r *Runtime)RngBlob(bytes int) []byte {
 		i, err := rand.Read(rnd[readctr:])
 		if i > 0 { readctr += i } else {r.Log.Errorf("error getting RNG: %s",err)}
 		if readctr >= bytes { return rnd }
+	}
+}
+
+func (r *Runtime)SeededPRNG() *mathrand.Rand {
+	blob :=r.RngBlob(8)
+	seed := binary.BigEndian.Uint64(blob)
+	return mathrand.New(mathrand.NewSource(int64(seed)))
+}
+func (r *Runtime)UnlikelyErr(err error, extra ...string) {
+	if err != nil {
+		if len(extra) == 0 {
+			r.Log.Errorf("error: %s", err)
+		} else {
+			r.Log.Errorf("%+v", extra, err)
+		}
 	}
 }
 
