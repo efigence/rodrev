@@ -8,8 +8,10 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"net/url"
 	"os"
 	"sort"
+	"strings"
 )
 
 var version string
@@ -81,8 +83,7 @@ func main() {
 		cli.BoolFlag{Name: "debug, d", Usage: "debug"},
 		cli.StringFlag{
 			Name:   "mqtt-url",
-			Value:  "tcp://mqtt:mqtt@127.0.0.1:1883",
-			Usage:  "URL for the MQ server. Use tls:// to enable encryption",
+			Usage:  "URL for the MQ server. Use tls:// to enable encryption (default tcp://mqtt:mqtt@127.0.0.1:1883)",
 			EnvVar: "RF_MQTT_URL",
 		},
 	}
@@ -96,10 +97,25 @@ func main() {
 		err := yamlcfg.LoadConfig(cfgFiles, &cfg)
 		if err != nil {
 			log.Errorf("error loading config")
+		} else {
+			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
-		if len(cfg.MQPrefix) == 0 { cfg.MQPrefix = "rv/" }
+		if len(c.String("mqtt-url")) > 0 {
+			cfg.MQAddress = c.String("mqtt-url")
+		}
+		if len(cfg.MQAddress) == 0 {
+			cfg.MQAddress = "tcp: // mqtt:mqtt@127.0.0.1:1883"
+		}
+		if !strings.Contains(cfg.MQAddress,"/?") {
+			cfg.MQAddress = cfg.MQAddress + "/?"
+		}
 
-
+		if !strings.Contains(cfg.MQAddress,"ca=") && len(cfg.CA) > 0 {
+			cfg.MQAddress = cfg.MQAddress + "&ca=" + url.QueryEscape(cfg.CA)
+		}
+		if !strings.Contains(cfg.MQAddress,"cert=") && len(cfg.ClientCert) > 0 {
+			cfg.MQAddress = cfg.MQAddress + "&cert=" + url.QueryEscape(cfg.ClientCert)
+		}
 
 		debug = c.Bool("debug")
 
@@ -109,12 +125,12 @@ func main() {
 		}
 		// reinit logger with cli settings
 		setupLogger()
+		log.Debugf("MQ server url %s",cfg.MQAddress)
 
 		log.Infof("Starting %s version: %s", app.Name, version)
-		log.Infof("var example %s", c.GlobalString("url"))
 			log.Infof("FQDN: %s", util.GetFQDN())
 		d, err := daemon.New(daemon.Config{
-			MQTTAddress: c.String("mqtt-url"),
+			MQTTAddress: cfg.MQAddress,
 			Logger:      log,
 			Version: version,
 			Prefix:  cfg.MQPrefix,
