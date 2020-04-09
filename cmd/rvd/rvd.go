@@ -1,6 +1,10 @@
 package main
 
 import (
+	"github.com/efigence/rodrev/config"
+	"github.com/efigence/rodrev/daemon"
+	"github.com/efigence/rodrev/util"
+	"github.com/XANi/go-yamlcfg"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -66,6 +70,7 @@ func setupLogger() {
 
 
 func main() {
+
 	app := cli.NewApp()
 	app.Name = "rvd"
 	app.Description = "Rodrev server"
@@ -82,6 +87,20 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
+
+		cfgFiles := []string{
+			"/etc/rodrev/server.conf",
+			"./cfg/server.yaml",
+		}
+		var cfg config.Config
+		err := yamlcfg.LoadConfig(cfgFiles, &cfg)
+		if err != nil {
+			log.Errorf("error loading config")
+		}
+		if len(cfg.MQPrefix) == 0 { cfg.MQPrefix = "rv/" }
+
+
+
 		debug = c.Bool("debug")
 
 		if c.Bool("help") {
@@ -93,7 +112,19 @@ func main() {
 
 		log.Infof("Starting %s version: %s", app.Name, version)
 		log.Infof("var example %s", c.GlobalString("url"))
-		RunDaemon(c)
+			log.Infof("FQDN: %s", util.GetFQDN())
+		d, err := daemon.New(daemon.Config{
+			MQTTAddress: c.String("mqtt-url"),
+			Logger:      log,
+			Version: version,
+			Prefix:  cfg.MQPrefix,
+		})
+		if err != nil {
+			log.Errorf("error starting daemon: %s", err)
+			exit <- 1
+		}
+		_ = d
+
 		return nil
 	}
 	app.Commands = []cli.Command{
@@ -116,6 +147,8 @@ func main() {
 			},
 		},
 	}
+
+
 	// to sort do that
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))

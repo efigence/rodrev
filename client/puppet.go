@@ -28,18 +28,20 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	go func() {
 		for ev := range replyCh {
 			var summary puppet.LastRunSummary
+			var fqdn string
+			if  v, ok := ev.Headers["fqdn"].(string); !ok {
+				r.Log.Warnf("skipping message, no fqdn header: %s",ev)
+				continue
+			} else {
+				fqdn = v
+			}
+
 			err := ev.Unmarshal(&summary)
 			if err != nil {
 				r.Log.Errorf("error decoding message: %s", err)
 				continue
 			}
-
-			r.Log.Infof("%s: %s, changes: %d/%d",
-				ev.NodeName(),
-				summary.Version.Config,
-				summary.Resources.Changed,
-				summary.Resources.Total,
-			)
+			statusMap[fqdn] = summary
 		}
 	}()
 	time.Sleep(time.Second * 4)
