@@ -86,7 +86,7 @@ func main() {
 		{
 			Name:    "puppet",
 			Aliases: []string{"p", "pu"},
-			Usage:   "run puppet",
+			Usage:   "puppet management (run/status/etc)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "target",
@@ -114,13 +114,22 @@ func main() {
 			Name:    "status",
 			Aliases: []string{"s"},
 			Usage:   "get status",
-			Action: StatusPuppet,
-		},
-		{
-			Name:    "discovery",
-			Aliases: []string{"di"},
-			Usage:   "get status",
-			Action: StatusRodrev,
+			Subcommands:[]cli.Command{
+				{
+					Name:  "puppet",
+					Usage: "puppet status",
+					Action: StatusPuppet,
+				},
+				{
+					Name:  "discovery",
+					Usage: "node discovery status",
+					Action: StatusRodrev,
+				},
+			},
+			Action: func (c *cli.Context) {
+				cli.ShowAppHelp(c)
+				StatusRodrev(c)
+			},
 		},
 	}
 	// to sort do that
