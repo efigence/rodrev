@@ -84,10 +84,18 @@ func New(cfg Config) (*Puppet,error) {
 
 
 
-type PuppetCmd struct {
+type PuppetCmdSend struct {
+	Command string `json:"cmd"`
+	Parameters interface{} `json:"params"`
+}
+
+// wrapper so we can delay unmarshalling parameters and switch on Command
+type PuppetCmdRecv struct {
 	Command string `json:"cmd"`
 	Parameters json.RawMessage `json:"params"`
 }
+
+
 type Msg struct {
 	Msg string `json:"msg"`
 }

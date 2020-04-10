@@ -1,6 +1,7 @@
 package puppet
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
@@ -25,7 +26,7 @@ func(p *Puppet)EventListener(evCh chan zerosvc.Event) error{
 }
 
 func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
-	var cmd PuppetCmd
+	var cmd PuppetCmdRecv
 	err := ev.Unmarshal(&cmd)
 	if err!=nil {
 		return p.puppetErr(err)
@@ -48,13 +49,18 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		err = ev.Reply(re)
 		if err != nil {return err}
 	case Run:
+		var opts RunOptions
+		err := json.Unmarshal(cmd.Parameters,&opts)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling puppet command: %s|[%s]", err,string(cmd.Parameters))
+		}
 		// directed request e.g. puppet/host.example.com
 		p.l.Warnf("path: %+v",reqPath)
 		if (reqPath[len(reqPath)-1] == p.fqdn && reqPath[len(reqPath)-2]=="puppet") || // unicast
 			(reqPath[len(reqPath)-1] == "puppet" && len(reqPath) == 2)  || // broadcast
 			(reqPath[len(reqPath)-1] == "puppet" && reqPath[len(reqPath)-2] != "puppet") { // broadcast
 
-			r:=p.Run()
+			r:=p.Run(opts)
 			err := re.Marshal(&r)
 			if err !=nil {
 				p.l.Errorf("error marshalling: %s", err)

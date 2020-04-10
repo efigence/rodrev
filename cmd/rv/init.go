@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/XANi/go-yamlcfg"
 	"github.com/efigence/rodrev/common"
@@ -47,6 +49,14 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 		Node:     node,
 		MQPrefix: cfg.MQPrefix,
 		Log:      log,
+	}
+	outputMode := c.GlobalString("output-format")
+	outputModeRe := regexp.MustCompile(
+		"^" +
+			strings.Join([]string{outCsv, outJson, outStderr}, "|") +
+			"$")
+	if !outputModeRe.MatchString(outputMode) {
+		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
 	}
 	return cfg, runtime
 

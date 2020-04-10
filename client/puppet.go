@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+
 func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunSummary {
 	statusMap := make(map[string]puppet.LastRunSummary,0)
 	replyPath,replyCh,err :=  r.GetReplyChan()
@@ -14,7 +15,7 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
-	err = query.Marshal(&puppet.PuppetCmd{Command:puppet.Status})
+	err = query.Marshal(&puppet.PuppetCmdSend{Command:puppet.Status})
 	if err != nil {
 		r.Log.Panicf("error marshalling command: %s", err)
 	}
@@ -48,14 +49,18 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime,node string) {
+func PuppetRun(r *common.Runtime,node string,delay time.Duration) {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
-	r.UnlikelyErr(query.Marshal(&puppet.PuppetCmd{Command: puppet.Run}))
+	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
+		Command: puppet.Run,
+		Parameters: puppet.RunOptions{Delay:delay, RandomizeDelay: true},
+	}))
+
 	query.ReplyTo = replyPath
 	if node == "all" {
 		err = query.Send(r.MQPrefix + "puppet")
