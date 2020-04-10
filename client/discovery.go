@@ -26,7 +26,6 @@ func Discover(r *common.Runtime) (
 	// time to wait for event stream to start
 	discoveryTime := time.After(time.Second * 10)
 	exit := false
-	r.Log.Info("running service discovery")
 	ctr := 0
 	for {
 		if exit {

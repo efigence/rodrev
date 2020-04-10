@@ -11,6 +11,7 @@ DEADJOE
 # compiled files
 _vendor/
 vendor/
+release/
 *\.test
 /tags
 TAGS
