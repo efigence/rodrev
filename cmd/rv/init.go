@@ -28,7 +28,7 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 		}
 	}
 	common.MergeCliConfig(&cfg, c)
-	log.Infof("config: %s",cfg.GetConfigPath())
+	log.Infof("config: %s", cfg.GetConfigPath())
 
 	tr := zerosvc.NewTransport(
 		zerosvc.TransportMQTT,

@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-type  RunStatus struct {
-	Busy bool
+type RunStatus struct {
+	Busy     bool
 	Downtime bool
-	Started bool
+	Started  bool
 }
 
 type RunOptions struct {
@@ -18,59 +18,56 @@ type RunOptions struct {
 	RandomizeDelay bool
 }
 
-
-
-
-func (p *Puppet)Run(opt RunOptions) RunStatus {
+func (p *Puppet) Run(opt RunOptions) RunStatus {
 	if !p.runLock.TryAcquire(1) {
 		return RunStatus{Busy: true}
 	} else {
 		go p.run(opt)
-		return RunStatus{Started:true}
+		return RunStatus{Started: true}
 	}
 }
 
-func (p *Puppet)run(opt RunOptions) {
+func (p *Puppet) run(opt RunOptions) {
 	defer p.runLock.Release(1)
 	var err error
-	if opt.Delay > time.Hour * 24 {
+	if opt.Delay > time.Hour*24 {
 		p.l.Errorf("capping delay to 24 hours")
 		opt.Delay = time.Hour * 24
 	}
-	if  opt.Delay > 0 {
+	if opt.Delay > 0 {
 		if opt.RandomizeDelay {
 			opt.Delay = time.Duration(p.rng.Int63n(opt.Delay.Nanoseconds()))
 		}
 
-		p.l.Infof("sleeping %ds before run",int64(opt.Delay.Seconds()))
+		p.l.Infof("sleeping %ds before run", int64(opt.Delay.Seconds()))
 		time.Sleep(opt.Delay)
 	}
 	p.l.Info("running puppet")
-	cmd := exec.Command(p.puppetPath,"agent","--onetime","--no-daemonize")
-	stdout, err:= cmd.StdoutPipe()
+	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize")
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		p.l.Errorf("error attaching stdin: %s", err)
 		return
 	}
 	stderr, err := cmd.StderrPipe()
-		if err != nil {
-			p.l.Errorf("error attaching stdin: %s", err)
-			return
-		}
+	if err != nil {
+		p.l.Errorf("error attaching stdin: %s", err)
+		return
+	}
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		sout := bufio.NewScanner(stdout)
 		for sout.Scan() {
-			p.l.Infof("+ %s",sout.Text())
+			p.l.Infof("+ %s", sout.Text())
 		}
 	}()
-		go func() {
+	go func() {
 		defer wg.Done()
 		serr := bufio.NewScanner(stderr)
 		for serr.Scan() {
-			p.l.Infof("! %s",serr.Text())
+			p.l.Infof("! %s", serr.Text())
 		}
 	}()
 	err = cmd.Start()
@@ -79,7 +76,7 @@ func (p *Puppet)run(opt RunOptions) {
 		return
 	}
 	wg.Wait()
-	err = 	cmd.Wait()
+	err = cmd.Wait()
 	if err != nil {
 		p.l.Errorf("error after puppet run: %s", err)
 		return
