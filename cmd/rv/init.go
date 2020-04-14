@@ -28,6 +28,10 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 		}
 	}
 	common.MergeCliConfig(&cfg, c)
+	debug = c.GlobalBool("debug")
+	quiet = c.GlobalBool("quiet")
+	InitLog()
+
 	log.Infof("config: %s", cfg.GetConfigPath())
 
 	tr := zerosvc.NewTransport(

@@ -11,6 +11,7 @@ import (
 var version string
 var log *zap.SugaredLogger
 var debug = true
+var quiet = false
 var exit = make(chan bool, 1)
 
 const (
@@ -20,6 +21,11 @@ const (
 )
 
 func init() {
+	InitLog()
+}
+
+
+func InitLog() {
 	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
 	// naive systemd detection. Drop timestamp if running under it
 	// if os.Getenv("INVOCATION_ID") != "" || os.Getenv("JOURNAL_STREAM") != "" {
@@ -30,32 +36,36 @@ func init() {
 	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
 	consoleStderr := zapcore.Lock(os.Stderr)
 	_ = consoleStderr
-
-	// if needed point differnt priority log to different place
-	highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+	filterAll  := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return true })
+	filterHighPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= zapcore.ErrorLevel
 	})
-	lowPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl < zapcore.ErrorLevel
+	filterQuiet := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.WarnLevel
 	})
-	core := zapcore.NewTee(
-		zapcore.NewCore(consoleEncoder, os.Stderr, lowPriority),
-		zapcore.NewCore(consoleEncoder, os.Stderr, highPriority),
-	)
-	logger := zap.New(core)
+	filterInfo := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.InfoLevel
+	})
+	var logger *zap.Logger
 	if debug {
-		logger = logger.WithOptions(
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterAll)
+		logger = zap.New(core).WithOptions(
 			zap.Development(),
 			zap.AddCaller(),
-			zap.AddStacktrace(highPriority),
+			zap.AddStacktrace(filterHighPriority),
+		)
+	} else if quiet {
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterQuiet)
+		logger = zap.New(core).WithOptions(
+			zap.AddCaller(),
 		)
 	} else {
-		logger = logger.WithOptions(
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterInfo)
+		logger = zap.New(core).WithOptions(
 			zap.AddCaller(),
 		)
 	}
 	log = logger.Sugar()
-
 }
 
 func main() {
@@ -67,6 +77,7 @@ func main() {
 	app.HideHelp = true
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{Name: "help, h", Usage: "show help"},
+		cli.BoolFlag{Name: "quiet, q, s", Usage: "quiet/silent mode. will only show stderr warnings/errors"},
 		cli.StringFlag{
 			Name:   "mqtt-url",
 			Usage:  "URL for the MQ server. Use tls:// to enable encryption (default: tcp://mqtt:mqtt@127.0.0.1:1883)",
