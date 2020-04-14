@@ -3,7 +3,7 @@ module github.com/efigence/rodrev
 require (
 	github.com/XANi/go-yamlcfg v0.1.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/urfave/cli v1.22.3
 	github.com/zerosvc/go-zerosvc v0.0.4
 	go.uber.org/zap v1.14.1

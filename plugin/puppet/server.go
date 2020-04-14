@@ -10,16 +10,15 @@ import (
 )
 import "time"
 
-
 func (p *Puppet) StartServer() {
 	go p.backgroundWorker()
 }
 
-func(p *Puppet)EventListener(evCh chan zerosvc.Event) error{
+func (p *Puppet) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling puppet event: %s:%+v", err,&ev)
+			p.l.Errorf("Error handling puppet event: %s:%+v", err, &ev)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
@@ -28,15 +27,15 @@ func(p *Puppet)EventListener(evCh chan zerosvc.Event) error{
 func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	var cmd PuppetCmdRecv
 	err := ev.Unmarshal(&cmd)
-	if err!=nil {
+	if err != nil {
 		return p.puppetErr(err)
 	}
 	if len(ev.ReplyTo) == 0 {
 		return fmt.Errorf("no reply-to in incoming event, aborting: %+v", ev)
 	}
 	re := p.node.NewEvent()
-	re.Headers["fqdn"]=util.GetFQDN()
-	reqPath := strings.Split(ev.RoutingKey,"/")
+	re.Headers["fqdn"] = util.GetFQDN()
+	reqPath := strings.Split(ev.RoutingKey, "/")
 	if len(reqPath) < 2 {
 		return fmt.Errorf("too short path, ignoring: %s", ev.RoutingKey)
 	}
@@ -45,46 +44,47 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		p.lock.RLock()
 		err := re.Marshal(p.lastRunSummary)
 		p.lock.RUnlock()
-		if err != nil {return err}
+		if err != nil {
+			return err
+		}
 		err = ev.Reply(re)
-		if err != nil {return err}
+		if err != nil {
+			return err
+		}
 	case Run:
 		var opts RunOptions
-		err := json.Unmarshal(cmd.Parameters,&opts)
+		err := json.Unmarshal(cmd.Parameters, &opts)
 		if err != nil {
-			return fmt.Errorf("error unmarshalling puppet command: %s|[%s]", err,string(cmd.Parameters))
+			return fmt.Errorf("error unmarshalling puppet command: %s|[%s]", err, string(cmd.Parameters))
 		}
 		// directed request e.g. puppet/host.example.com
-		p.l.Warnf("path: %+v",reqPath)
-		if (reqPath[len(reqPath)-1] == p.fqdn && reqPath[len(reqPath)-2]=="puppet") || // unicast
-			(reqPath[len(reqPath)-1] == "puppet" && len(reqPath) == 2)  || // broadcast
+		p.l.Warnf("path: %+v", reqPath)
+		if (reqPath[len(reqPath)-1] == p.fqdn && reqPath[len(reqPath)-2] == "puppet") || // unicast
+			(reqPath[len(reqPath)-1] == "puppet" && len(reqPath) == 2) || // broadcast
 			(reqPath[len(reqPath)-1] == "puppet" && reqPath[len(reqPath)-2] != "puppet") { // broadcast
 
-			r:=p.Run(opts)
+			r := p.Run(opts)
 			err := re.Marshal(&r)
-			if err !=nil {
+			if err != nil {
 				p.l.Errorf("error marshalling: %s", err)
 				return err
 			}
 			err = ev.Reply(re)
-			if err != nil {return err}
+			if err != nil {
+				return err
+			}
 		} else { // ignore
-			p.l.Debugf("got request for path %s, ignoring as it does  not match",ev.RoutingKey, p.fqdn)
+			p.l.Debugf("got request for path %s, ignoring as it does  not match", ev.RoutingKey, p.fqdn)
 		}
-
-
-
 
 	default:
 		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
 		ev.Reply(re)
-		p.l.Warnf("unknown command %s",cmd.Command)
+		p.l.Warnf("unknown command %s", cmd.Command)
 	}
 	return nil
 }
-
-
 
 func (p *Puppet) backgroundWorker() {
 	for {

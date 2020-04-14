@@ -10,15 +10,16 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
+	"os/signal"
 	"sort"
+	"syscall"
+	"time"
 )
 
 var version string
 var log *zap.SugaredLogger
 var debug = false
 var exit = make(chan int, 1)
-
-
 
 func init() {
 	setupLogger()
@@ -69,7 +70,6 @@ func setupLogger() {
 	log = logger.Sugar()
 }
 
-
 func main() {
 
 	app := cli.NewApp()
@@ -99,8 +99,8 @@ func main() {
 		} else {
 			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
-		common.MergeCliConfig(&cfg,c)
-		log.Warnf("%+v",cfg)
+		common.MergeCliConfig(&cfg, c)
+		log.Warnf("%+v", cfg)
 
 		debug = c.Bool("debug")
 
@@ -110,15 +110,26 @@ func main() {
 		}
 		// reinit logger with cli settings
 		setupLogger()
-		log.Debugf("MQ server url %s",cfg.MQAddress)
+		log.Debugf("MQ server url %s", cfg.MQAddress)
+		hup := make(chan os.Signal, 1)
+		signal.Notify(hup, syscall.SIGHUP)
+
+		go func() {
+			for sig := range hup {
+				println(sig)
+				log.Warnf("got HUP, exiting in 1 minute")
+				time.Sleep(time.Minute)
+				exit <- 0
+			}
+		}()
 
 		log.Infof("Starting %s version: %s", app.Name, version)
-			log.Infof("FQDN: %s", util.GetFQDN())
+		log.Infof("FQDN: %s", util.GetFQDN())
 		d, err := daemon.New(daemon.Config{
 			MQTTAddress: cfg.MQAddress,
 			Logger:      log,
-			Version: version,
-			Prefix:  cfg.MQPrefix,
+			Version:     version,
+			Prefix:      cfg.MQPrefix,
 		})
 		if err != nil {
 			log.Errorf("error starting daemon: %s", err)
@@ -149,10 +160,9 @@ func main() {
 		},
 	}
 
-
 	// to sort do that
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))
 	app.Run(os.Args)
-	os.Exit(<- exit)
+	os.Exit(<-exit)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // MergeCliConfig merges(overrides mostly) cli and file config values
-func MergeCliConfig(cfg *config.Config,c *cli.Context) {
+func MergeCliConfig(cfg *config.Config, c *cli.Context) {
 	if len(c.GlobalString("mqtt-url")) > 0 {
 		cfg.MQAddress = c.GlobalString("mqtt-url")
 	}
@@ -23,7 +23,7 @@ func MergeCliConfig(cfg *config.Config,c *cli.Context) {
 	if len(u.Path) == 0 {
 		u.Path = "/"
 	}
-	u.Query().Set("kurwa","mac")
+	u.Query().Set("kurwa", "mac")
 	if len(u.Query().Get("ca")) == 0 {
 		u.RawQuery = u.RawQuery + "&ca=" + url.QueryEscape(cfg.CA)
 	}

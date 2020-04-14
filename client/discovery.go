@@ -13,7 +13,7 @@ import (
 func Discover(r *common.Runtime) (
 	serviceMap map[string][]common.Node,
 	nodesActive map[string]common.Node,
-	nodesStale map[string]common.Node ,
+	nodesStale map[string]common.Node,
 	err error,
 ) {
 	serviceMap = make(map[string][]common.Node)
@@ -46,19 +46,19 @@ func Discover(r *common.Runtime) (
 			_ = fqdn
 
 			var hb zerosvc.Heartbeat
-			hbNode :=  common.Node{
-				Services: make([]string,0),
+			hbNode := common.Node{
+				Services: make([]string, 0),
 			}
 			err := json.Unmarshal(ev.Body, &hb)
 			if err != nil {
 				r.Log.Errorf("error unmarshalling %s: %s", string(ev.Body), err)
 				continue
 			}
-			has := func(key string)  (string,bool) { str, ok := hb.NodeInfo[key].(string); return str, ok }
+			has := func(key string) (string, bool) { str, ok := hb.NodeInfo[key].(string); return str, ok }
 			if val, ok := has("fqdn"); ok {
-				hbNode.FQDN =val
+				hbNode.FQDN = val
 			} else {
-				r.Log.Warnf("node without info data: %s",ev.NodeName())
+				r.Log.Warnf("node without info data: %s", ev.NodeName())
 				continue
 			}
 			if val, ok := has("version"); ok {
@@ -69,20 +69,20 @@ func Discover(r *common.Runtime) (
 			hbNode.LastUpdate = &ts
 			for k, _ := range hb.Services {
 				if _, ok := serviceMap[k]; !ok {
-					serviceMap[k] = make([]common.Node,0)
+					serviceMap[k] = make([]common.Node, 0)
 				}
-				serviceMap[k] = append(serviceMap[k],hbNode)
-				hbNode.Services = append(hbNode.Services,k)
+				serviceMap[k] = append(serviceMap[k], hbNode)
+				hbNode.Services = append(hbNode.Services, k)
 			}
 			if ev.RetainTill.After(time.Now()) {
-				nodesActive[hbNode.FQDN]=hbNode
+				nodesActive[hbNode.FQDN] = hbNode
 			} else {
-				nodesStale[hbNode.FQDN]=hbNode
+				nodesStale[hbNode.FQDN] = hbNode
 			}
 		case <-discoveryTime:
 			exit = true
 		}
 	}
-	return serviceMap,nodesActive,nodesStale,nil
+	return serviceMap, nodesActive, nodesStale, nil
 
 }

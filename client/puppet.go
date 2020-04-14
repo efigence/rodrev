@@ -6,16 +6,15 @@ import (
 	"time"
 )
 
-
-func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunSummary {
-	statusMap := make(map[string]puppet.LastRunSummary,0)
-	replyPath,replyCh,err :=  r.GetReplyChan()
+func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRunSummary {
+	statusMap := make(map[string]puppet.LastRunSummary, 0)
+	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
-	err = query.Marshal(&puppet.PuppetCmdSend{Command:puppet.Status})
+	err = query.Marshal(&puppet.PuppetCmdSend{Command: puppet.Status})
 	if err != nil {
 		r.Log.Panicf("error marshalling command: %s", err)
 	}
@@ -30,8 +29,8 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 		for ev := range replyCh {
 			var summary puppet.LastRunSummary
 			var fqdn string
-			if  v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Warnf("skipping message, no fqdn header: %s",ev)
+			if v, ok := ev.Headers["fqdn"].(string); !ok {
+				r.Log.Warnf("skipping message, no fqdn header: %s", ev)
 				continue
 			} else {
 				fqdn = v
@@ -49,7 +48,7 @@ func PuppetStatus(r *common.Runtime,filter ...string) map[string]puppet.LastRunS
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime,node string,delay time.Duration) {
+func PuppetRun(r *common.Runtime, node string, delay time.Duration) {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
@@ -57,8 +56,8 @@ func PuppetRun(r *common.Runtime,node string,delay time.Duration) {
 	defer close(replyCh)
 	query := r.Node.NewEvent()
 	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
-		Command: puppet.Run,
-		Parameters: puppet.RunOptions{Delay:delay, RandomizeDelay: true},
+		Command:    puppet.Run,
+		Parameters: puppet.RunOptions{Delay: delay, RandomizeDelay: true},
 	}))
 
 	query.ReplyTo = replyPath
