@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
+	"github.com/zerosvc/go-zerosvc"
 	"time"
 )
 
@@ -35,7 +36,6 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 			} else {
 				fqdn = v
 			}
-
 			err := ev.Unmarshal(&summary)
 			if err != nil {
 				r.Log.Errorf("error decoding message: %s", err)
@@ -48,7 +48,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime, node string, delay time.Duration) {
+func PuppetRun(r *common.Runtime, node string, delay time.Duration) (chan zerosvc.Event) {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
@@ -69,5 +69,6 @@ func PuppetRun(r *common.Runtime, node string, delay time.Duration) {
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
 	}
+	return replyCh
 
 }

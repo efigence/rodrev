@@ -88,7 +88,16 @@ func StatusPuppet(c *cli.Context) error {
 		}
 	case outCsv:
 		csvW := csv.NewWriter(os.Stdout)
-		csvW.Write([]string{"fqdn", "puppet_version", "config_version", "last_run", "changed", "total", "duration"})
+		csvW.Write([]string{
+			"fqdn",
+			"last_run",
+			"changed",
+			"total",
+			"duration",
+			"puppet_version",
+			"config_version",
+
+		})
 		for node, summary := range status {
 			totalDuration := "0"
 			if v, ok := summary.Timing.Duration["total"]; ok {
@@ -96,11 +105,13 @@ func StatusPuppet(c *cli.Context) error {
 			}
 			csvW.Write([]string{
 				node,
-				summary.Version.Puppet,
-				summary.Version.Config,
 				time.Unix(int64(summary.Timing.LastRun), 0).Format(time.RFC3339),
 				strconv.Itoa(summary.Resources.Changed),
+				strconv.Itoa(summary.Resources.Total),
 				totalDuration,
+				summary.Version.Puppet,
+				summary.Version.Config,
+
 			})
 		}
 		csvW.Flush()

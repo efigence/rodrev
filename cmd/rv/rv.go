@@ -97,20 +97,43 @@ func main() {
 					Usage: "add random delay to each run. Use when running many at once",
 				},
 			},
+			Subcommands: []cli.Command {
+				{
+					Name: "run",
+					Usage: "run puppet on one or more machines. Needs --target. Specify --target all to run on all discovered ones",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "target",
+							Usage: "node to run puppet on. 'all' to run on all nodes (SET DELAY)",
+							Required: true,
+						},
+					},
+					Action : func(c *cli.Context) error {
+						cfg, runtime := Init(c)
+						_ = cfg
+						target := c.String("target")
+						if len(target) == 0 {
+							log.Warn("need --target parameter")
+							os.Exit(1)
+						}
+						if c.String("target") == "all" && c.Duration("random-delay") == 0 {
+							log.Errorf("do not run all 'all' without delay, if you REALLY need to run all nodes at once set random-delay to '1s' ")
+							os.Exit(1)
+						}
+						client.PuppetRun(&runtime, target, c.Duration("random-delay"))
+						log.Warnf("running puppet on %s", c.String("target"))
+						return nil
+					},
+				},
+				{
+					Name:        "status",
+					Usage:       "status",
+					Description: "display status of last puppet run",
+					Action:      StatusPuppet,
+				},
+			},
 			Action: func(c *cli.Context) error {
-				cfg, runtime := Init(c)
-				_ = cfg
-				target := c.String("target")
-				if len(target) == 0 {
-					log.Warn("need --target parameter")
-					os.Exit(1)
-				}
-				if c.String("target") == "all" && c.Duration("random-delay") == 0 {
-					log.Errorf("do not run all 'all' without delay, if you REALLY need to run all nodes at once set random-delay to '1s' ")
-					os.Exit(1)
-				}
-				client.PuppetRun(&runtime, target, c.Duration("random-delay"))
-				log.Warnf("running puppet on %s", c.String("target"))
+				cli.ShowAppHelp(c)
 				return nil
 			},
 		},
