@@ -24,7 +24,10 @@ func NewQueryEngine(r *common.Runtime) *Engine {
 func (e *Engine) ParseBool(q string) (bool,error) {
 	vars := e.r.Cfg.NodeMeta
 
-	zg := zygo.NewZlisp()
+	zg := zygo.NewZlispSandbox()
+	zg.ImportRegex()
+	zg.ImportRandom()
+	zg.AddFunction("regex", FuzzyCompareFunction)
 	varsLisp, err := zygo.GoToSexp(vars, zg)
 	if err != nil {
 		return false, err
