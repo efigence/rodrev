@@ -73,7 +73,7 @@ func StatusRodrev(c *cli.Context) error {
 func StatusPuppet(c *cli.Context) error {
 	cfg, runtime := Init(c)
 	_ = cfg
-	status := client.PuppetStatus(&runtime)
+	status := client.PuppetStatus(&runtime,c.GlobalString("filter"))
 
 	switch c.GlobalString("output-format") {
 	case outStderr:

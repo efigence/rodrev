@@ -110,6 +110,8 @@ func main() {
 		}
 		// reinit logger with cli settings
 		setupLogger()
+		cfg.Logger = log
+		cfg.Version = version
 		log.Debugf("MQ server url %s", cfg.MQAddress)
 		hup := make(chan os.Signal, 1)
 		signal.Notify(hup, syscall.SIGHUP)
@@ -125,12 +127,8 @@ func main() {
 
 		log.Infof("Starting %s version: %s", app.Name, version)
 		log.Infof("FQDN: %s", util.GetFQDN())
-		d, err := daemon.New(daemon.Config{
-			MQTTAddress: cfg.MQAddress,
-			Logger:      log,
-			Version:     version,
-			Prefix:      cfg.MQPrefix,
-		})
+		d, err := daemon.New(cfg)
+
 		if err != nil {
 			log.Errorf("error starting daemon: %s", err)
 			exit <- 1
@@ -139,26 +137,8 @@ func main() {
 
 		return nil
 	}
-	app.Commands = []cli.Command{
-		{
-			Name:    "rem",
-			Aliases: []string{"a"},
-			Usage:   "example cmd",
-			Action: func(c *cli.Context) error {
-				log.Warn("running example cmd")
-				return nil
-			},
-		},
-		{
-			Name:    "add",
-			Aliases: []string{"a"},
-			Usage:   "example cmd",
-			Action: func(c *cli.Context) error {
-				log.Warn("running example cmd")
-				return nil
-			},
-		},
-	}
+	app.Commands = []cli.Command{}
+
 
 	// to sort do that
 	sort.Sort(cli.FlagsByName(app.Flags))

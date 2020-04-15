@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
+	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
@@ -16,6 +17,8 @@ type Runtime struct {
 	Node     *zerosvc.Node
 	FQDN     string
 	MQPrefix string
+	Cfg      config.Config
+	Metadata map[string]interface{}
 	Log      *zap.SugaredLogger
 }
 

@@ -18,7 +18,7 @@ func (p *Puppet) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling puppet event: %s:%+v", err, &ev)
+			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(),err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
@@ -38,6 +38,17 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	reqPath := strings.Split(ev.RoutingKey, "/")
 	if len(reqPath) < 2 {
 		return fmt.Errorf("too short path, ignoring: %s", ev.RoutingKey)
+	}
+	if len(cmd.Filter) > 0 {
+
+		ok, err := p.query.ParseBool(cmd.Filter)
+		if err != nil {
+			return fmt.Errorf("remote query error: %s", err)
+		}
+		if !ok {
+			p.l.Debugf("node skipped by query filter %s",cmd.Filter)
+			return nil
+		}
 	}
 	switch cmd.Command {
 	case Status:

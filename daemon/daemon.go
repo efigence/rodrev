@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"github.com/efigence/rodrev/common"
+	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/plugin/puppet"
+	"github.com/efigence/rodrev/query"
 	"github.com/efigence/rodrev/util"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zerosvc/go-zerosvc"
@@ -12,28 +14,25 @@ import (
 
 type Daemon struct {
 	node   *zerosvc.Node
+	runtime *common.Runtime
+	query  *query.Engine
+
 	l      *zap.SugaredLogger
 	prefix string
 	fqdn   string
 }
 
-type Config struct {
-	Logger      *zap.SugaredLogger
-	MQTTAddress string
-	Prefix      string
-	Version     string
-}
 
-func New(cfg Config) (*Daemon, error) {
+func New(cfg config.Config) (*Daemon, error) {
 	var d Daemon
-	d.prefix = cfg.Prefix
+	d.prefix = cfg.MQPrefix
 	// TODO load from cert
 	d.fqdn = util.GetFQDN()
 	d.l = cfg.Logger
-	tr := zerosvc.NewTransport(zerosvc.TransportMQTT, cfg.MQTTAddress, zerosvc.TransportMQTTConfig{
+	tr := zerosvc.NewTransport(zerosvc.TransportMQTT,cfg.MQAddress, zerosvc.TransportMQTTConfig{
 		// cleanup retained heartbeat by sending empty message
 		// no TTL in MQTTv3
-		LastWillTopic:  cfg.Prefix + "heartbeat/" + d.fqdn,
+		LastWillTopic:  cfg.MQPrefix + "heartbeat/" + d.fqdn,
 		LastWillRetain: true,
 	})
 
@@ -53,16 +52,21 @@ func New(cfg Config) (*Daemon, error) {
 	}
 	d.node.SetTransport(tr)
 
-	runtime := common.Runtime{
+	runtime := &common.Runtime{
 		Node:     d.node,
 		FQDN:     d.fqdn,
-		MQPrefix: cfg.Prefix,
+		MQPrefix: cfg.MQPrefix,
 		Log:      cfg.Logger,
+		Metadata: cfg.NodeMeta,
+		Cfg: cfg,
 	}
+	d.runtime = runtime
+	d.query = query.NewQueryEngine(runtime)
 	go d.heartbeat(time.Minute)
 
 	pu, err := puppet.New(puppet.Config{
 		Runtime: runtime,
+		Query: d.query,
 	})
 	if err != nil {
 		return nil, err

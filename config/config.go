@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"github.com/zerosvc/go-zerosvc"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
@@ -11,6 +13,9 @@ type Config struct {
 	MQAddress  string `yaml:"mq_address,omitempty"`
 	CA         string `yaml:"ca_certs,omitempty"`
 	ClientCert string `yaml:"client_cert,omitempty"`
+	NodeMeta map[string]interface{} `yaml:"node_meta,omitempty"`
+	Logger *zap.SugaredLogger `yaml:"-"`
+	Version string `yaml:"-"`
 	configPath string
 }
 
@@ -40,3 +45,13 @@ func (c *Config) SetConfigPath(s string) {
 func (c *Config) GetConfigPath() string {
 	return c.configPath
 }
+
+func (c *Config)Validate() {
+	if c.NodeMeta == nil {
+		c.NodeMeta = make(map[string]interface{},0)
+	}
+	if _,ok :=  c.NodeMeta["fqdn"] ; !ok{
+		c.NodeMeta["fqdn"] = zerosvc.GetFQDN()
+	}
+}
+
