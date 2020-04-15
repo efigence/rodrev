@@ -15,7 +15,18 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
-	err = query.Marshal(&puppet.PuppetCmdSend{Command: puppet.Status})
+	f := ""
+	if len(filter) == 1 {
+		f = filter[0]
+	}
+	if len(filter) > 1 {
+		panic("filter accepts 0 or 1 arguments")
+	}
+	err = query.Marshal(&puppet.PuppetCmdSend{
+		Command:    puppet.Status,
+		Filter:     f,
+		Parameters: nil,
+	})
 	if err != nil {
 		r.Log.Panicf("error marshalling command: %s", err)
 	}
@@ -48,7 +59,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime, node string, delay time.Duration) (chan zerosvc.Event) {
+func PuppetRun(r *common.Runtime, node string,filter string, delay time.Duration) (chan zerosvc.Event) {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
@@ -57,6 +68,7 @@ func PuppetRun(r *common.Runtime, node string, delay time.Duration) (chan zerosv
 	query := r.Node.NewEvent()
 	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
 		Command:    puppet.Run,
+		Filter: filter,
 		Parameters: puppet.RunOptions{Delay: delay, RandomizeDelay: true},
 	}))
 

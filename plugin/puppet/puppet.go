@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/efigence/rodrev/common"
+	"github.com/efigence/rodrev/query"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
@@ -21,7 +22,8 @@ type Config struct {
 	LastRunReportYAML  string        `yaml:"last_run_report"`
 	RefreshInterval    time.Duration `yaml:"refresh_interval"`
 	FQDN               string
-	Runtime            common.Runtime
+	Runtime            *common.Runtime
+	Query              *query.Engine
 }
 
 const (
@@ -44,7 +46,8 @@ type Puppet struct {
 	runLock        *semaphore.Weighted
 	puppetPath     string
 	fqdn           string
-	runtime        common.Runtime
+	runtime        *common.Runtime
+	query          *query.Engine
 	rng            *rand.Rand
 }
 
@@ -76,6 +79,8 @@ func New(cfg Config) (*Puppet, error) {
 	p.node = cfg.Runtime.Node
 	p.fqdn = cfg.Runtime.FQDN
 	p.rng = cfg.Runtime.SeededPRNG()
+	p.query = cfg.Query
+	p.runtime = cfg.Runtime
 
 	if len(p.puppetPath) == 0 {
 		return nil, fmt.Errorf("can't find puppet in PATH or in /usr/local/bin")
@@ -89,12 +94,14 @@ func New(cfg Config) (*Puppet, error) {
 
 type PuppetCmdSend struct {
 	Command    string      `json:"cmd"`
+	Filter     string          `json:"filter,omitempty"`
 	Parameters interface{} `json:"params"`
 }
 
 // wrapper so we can delay unmarshalling parameters and switch on Command
 type PuppetCmdRecv struct {
 	Command    string          `json:"cmd"`
+	Filter     string          `json:"filter,omitempty"`
 	Parameters json.RawMessage `json:"params"`
 }
 
