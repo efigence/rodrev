@@ -104,7 +104,7 @@ func main() {
 					Usage: "node to run puppet on. 'all' to run on all nodes (SET DELAY)",
 				},
 				cli.StringFlag{
-					Name:        "filter",
+					Name:        "filter,f,query",
 					Usage:       "set a filter expression for nodes",
 				},
 				cli.DurationFlag{
@@ -131,13 +131,13 @@ func main() {
 							log.Warn("need --target parameter")
 							os.Exit(1)
 						}
-						if c.String("target") == "all" && c.Duration("random-delay") == 0 {
+						if c.String("target") == "all" && c.GlobalDuration("random-delay") == 0 {
 							log.Errorf("do not run all 'all' without delay, if you REALLY need to run all nodes at once set random-delay to '1s' ")
 							os.Exit(1)
 						}
 						filter := c.GlobalString("filter")
 						log.Warnf(filter)
-						client.PuppetRun(&runtime, target, filter, c.Duration("random-delay"))
+						client.PuppetRun(&runtime, target, filter, c.GlobalDuration("random-delay"))
 						log.Warnf("running puppet on %s", c.String("target"))
 						return nil
 					},

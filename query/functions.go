@@ -30,7 +30,7 @@ func FuzzyCompareFunction(env *zygo.Zlisp, name string, args []zygo.Sexp) (zygo.
 	}
 	reverse := false
 	switch name {
-	case "fr":
+	case "regexp":
 		reverse = false
 	case "regex":
 		reverse = false
