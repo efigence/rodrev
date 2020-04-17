@@ -1,5 +1,7 @@
 module github.com/efigence/rodrev
 
+go 1.14
+
 require (
 	github.com/XANi/go-yamlcfg v0.2.0
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect

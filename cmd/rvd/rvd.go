@@ -9,12 +9,15 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"net/http"
 	"os"
 	"os/signal"
 	"sort"
 	"syscall"
 	"time"
+
 )
+import _ "net/http/pprof"
 
 var version string
 var log *zap.SugaredLogger
@@ -85,9 +88,17 @@ func main() {
 			Usage:  "URL for the MQ server. Use tls:// to enable encryption (default tcp://mqtt:mqtt@127.0.0.1:1883)",
 			EnvVar: "RF_MQTT_URL",
 		},
+		cli.StringFlag{
+			Name:  "profile-addr",
+			Usage: "run profiler under this addr. example: localhost:6060",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
-
+		if len(c.String("profile-addr")) > 0 {
+			go func() {
+				log.Errorf("error starting debug port: %s", http.ListenAndServe(c.String("profile-addr"), nil))
+			}()
+		}
 		cfgFiles := []string{
 			"/etc/rodrev/server.conf",
 			"./cfg/server.yaml",
