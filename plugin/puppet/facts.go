@@ -37,7 +37,10 @@ func (f *Facts) UpdateFacts() error {
 	}
 	f.l.Lock()
 	defer f.l.Unlock()
-	f.facts = &facts
+	// in case we get empty YAML do not update
+	if len(facts) > 0 {
+		f.facts = &facts
+	}
 	return nil
 }
 
