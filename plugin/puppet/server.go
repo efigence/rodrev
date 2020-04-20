@@ -100,6 +100,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 func (p *Puppet) backgroundWorker() {
 	for {
 		p.updateLastRunSummary()
+		p.updateFacts()
 		time.Sleep(p.cfg.RefreshInterval)
 
 	}
@@ -120,4 +121,14 @@ func (p *Puppet) updateLastRunSummary() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.lastRunSummary = summary
+}
+func (p *Puppet) updateFacts() {
+	f, err := LoadFacts(p.cfg.FactsYAML)
+	if err != nil {
+		p.l.Warnf("error loading facts yaml [%s]: %s", p.cfg.FactsYAML, err)
+	}
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.facts = &f
+
 }

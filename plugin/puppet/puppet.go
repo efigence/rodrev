@@ -20,6 +20,7 @@ import (
 type Config struct {
 	LastRunSummaryYAML string        `yaml:"last_run_summary"`
 	LastRunReportYAML  string        `yaml:"last_run_report"`
+	FactsYAML          string        `yaml:"facts"`
 	RefreshInterval    time.Duration `yaml:"refresh_interval"`
 	FQDN               string
 	Runtime            *common.Runtime
@@ -34,11 +35,13 @@ const (
 var DefaultConfig = Config{
 	LastRunReportYAML:  "/var/lib/puppet/state/last_run_report.yaml",
 	LastRunSummaryYAML: "/var/lib/puppet/state/last_run_summary.yaml",
+	FactsYAML: "/var/lib/puppet/facts.yaml",
 	RefreshInterval:    time.Minute,
 }
 
 type Puppet struct {
 	node           *zerosvc.Node
+	facts          *Facts
 	lastRunSummary LastRunSummary
 	lock           sync.RWMutex
 	l              *zap.SugaredLogger
@@ -81,6 +84,7 @@ func New(cfg Config) (*Puppet, error) {
 	p.rng = cfg.Runtime.SeededPRNG()
 	p.query = cfg.Query
 	p.runtime = cfg.Runtime
+	p.facts = &Facts{}
 
 	if len(p.puppetPath) == 0 {
 		return nil, fmt.Errorf("can't find puppet in PATH or in /usr/local/bin")
