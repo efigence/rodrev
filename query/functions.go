@@ -88,6 +88,23 @@ func traverseHash(args []string, hash map[string]interface{}) interface{} {
 	return root
 }
 
+func sexpArrToStr(args *zygo.SexpArray) []string {
+	out := make([]string,0)
+	for _, arg := range args.Val {
+		switch v := arg.(type) {
+		case *zygo.SexpArray:
+			out = append(out, sexpArrToStr(v)...)
+		case *zygo.SexpStr:
+			out = append(out,v.S)
+		case *zygo.SexpInt:
+			out = append(out,strconv.Itoa(int(v.Val)))
+		default:
+			out = append(out,fmt.Sprintf("wrong type %T in input %+v",v, args))
+		}
+	}
+	return out
+}
+
 
 func HashGet(hash *map[string]interface{}) func (env *zygo.Zlisp, name string, args []zygo.Sexp) (zygo.Sexp, error) {
 
@@ -95,52 +112,31 @@ func HashGet(hash *map[string]interface{}) func (env *zygo.Zlisp, name string, a
 		if len(args) == 0 {
 			return zygo.SexpNull, zygo.WrongNargs
 		}
-		root := *hash
-		// for idx, arg := range args {
-		// 	switch v := root.(type) {
-		// 	case map[string]interface{}:
-		//
-		// 	}
-		// 	_ = idx
-		// 	_ = arg
-		// }
-		_ = root
-		key := ""
-		_ = key
-		switch v := args[0].(type) {
-		case *zygo.SexpStr:
-			_ = v
-			//arg1 = v.S
-		default:
-			return zygo.SexpNull, fmt.Errorf("%s accepts string/int as first argument, not %T", name, args[0])
-		}
-		arg2 := ""
-		switch v := args[1].(type) {
-		case *zygo.SexpStr:
-			arg2 = v.S
-		default:
-			return zygo.SexpNull, fmt.Errorf("%s accepts string as second argument, not %T", name, args[1])
-		}
-		reverse := false
-		switch name {
-		case "regexp":
-			reverse = false
-		case "regex":
-			reverse = false
-		case "rfr/":
-			reverse = true
 
-		default:
-			return zygo.SexpNull, fmt.Errorf("%s is not a supported function", name)
+		path := make ([]string,0)
+		for _, arg := range args {
+			switch v := arg.(type) {
+			case *zygo.SexpStr:
+				path = append(path,v.S)
+			case *zygo.SexpArray:
+				path = append(path, sexpArrToStr(v)...)
+			case *zygo.SexpInt:
+				path = append(path,strconv.Itoa(int(v.Val)))
+			default:
+				return zygo.SexpNull,fmt.Errorf("wrong argument type %T in the list %+v",v,args)
+			}
 		}
-		re, err := regexp.Compile(arg2)
+		if len(path) == 0 {
+			return zygo.SexpNull, fmt.Errorf("resulting parse got 0 elements: %+v", args)
+		}
+
+		val := traverseHash(path,*hash)
+		out, err := zygo.GoToSexp(val,env)
 		if err != nil {
-			return zygo.SexpNull, fmt.Errorf("compiling regexp [%s] failed: %s", arg2, err)
+			return zygo.SexpNull,fmt.Errorf("error converting [%+v] to Sexp: %s",out,err)
+
 		}
-		cond := re.MatchString("")
-		if reverse {
-			cond = !cond
-		}
-		return &zygo.SexpBool{Val: cond}, nil
+		return out,nil
+
 	}
 }
