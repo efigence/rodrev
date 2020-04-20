@@ -3,15 +3,46 @@ package puppet
 import (
 	"gopkg.in/yaml.v3"
 	"os"
+	"sync"
 )
 
-type Facts map[string]interface{}
+type Facts struct {
+	facts *map[string]interface{}
+	path string
+	l sync.Mutex
+}
 
+// LoadFacts creates fact structure and loads fact into it
+// on error it can be retired via UpdateFacts() method
 func LoadFacts(path string) (Facts, error) {
-	fd, err := os.Open(path)
-	if err != nil {return Facts{},err}
 	var f Facts
-	err = yaml.NewDecoder(fd).Decode(&f)
-	if err != nil {return Facts{},err}
+	f.path = path
+	fd, err := os.Open(path)
+	if err != nil {return f,err}
+	var facts map[string]interface{}
+	err = yaml.NewDecoder(fd).Decode(&facts)
+	f.facts = &facts
+	if err != nil {return f,err}
 	return f,nil
+}
+
+func (f *Facts) UpdateFacts() error {
+	fd, err := os.Open(f.path)
+	if err != nil {return err}
+	var facts map[string]interface{}
+	err = yaml.NewDecoder(fd).Decode(&facts)
+	defer fd.Close()
+	if err != nil {
+		return err
+	}
+	f.l.Lock()
+	defer f.l.Unlock()
+	f.facts = &facts
+	return nil
+}
+
+func (f *Facts) Map() *map[string]interface{} {
+	f.l.Lock()
+	defer f.l.Unlock()
+	return f.facts
 }

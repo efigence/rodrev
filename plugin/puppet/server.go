@@ -123,12 +123,9 @@ func (p *Puppet) updateLastRunSummary() {
 	p.lastRunSummary = summary
 }
 func (p *Puppet) updateFacts() {
-	f, err := LoadFacts(p.cfg.FactsYAML)
+	err := p.facts.UpdateFacts()
 	if err != nil {
-		p.l.Warnf("error loading facts yaml [%s]: %s", p.cfg.FactsYAML, err)
+		p.l.Warnf("error updating facts: %s", err)
 	}
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.facts = &f
 
 }

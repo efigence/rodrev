@@ -9,7 +9,7 @@ import (
 
 type Engine struct {
 	r *common.Runtime
-	dataMap map[string]*map[string]interface{}
+	dataMap map[string]MapGetter
 }
 
 
@@ -19,14 +19,17 @@ func NewQueryEngine(r *common.Runtime) *Engine {
 	}
 	return &Engine{
 		r: r,
-		dataMap: make(map[string]*map[string]interface{},0),
+		dataMap: make(map[string]MapGetter,0),
 	}
 }
 
-func (e *Engine) RegisterMap(name string, m *map[string]interface{}) error {
-	zg := zygo.NewZlispSandbox()
-	_, err := zygo.GoToSexp(*m,zg)
-	if err != nil {return fmt.Errorf("error registering %s: %s",name,err)}
+
+// MapGetter returns reference to a map
+type MapGetter interface {
+	 Map() *map[string]interface{}
+}
+
+func (e *Engine) RegisterMap(name string, m MapGetter) error {
 	e.dataMap[name] = m
 	return nil
 
@@ -43,17 +46,14 @@ func (e *Engine) ParseBool(q string) (bool,error) {
 	zg.ImportRandom()
 	zg.AddFunction("regex", FuzzyCompareFunction)
 	zg.AddFunction("regexp", FuzzyCompareFunction)
-		varsLisp, err := zygo.GoToSexp(vars, zg)
+
+	varsLisp, err := zygo.GoToSexp(vars, zg)
 	if err != nil {
 		return false, err
 	}
 	zg.AddGlobal("node", varsLisp)
 	for n, m := range e.dataMap {
-		mLisp, err := zygo.GoToSexp(*m, zg)
-		if err != nil {
-			return false, fmt.Errorf("error initializing data backend: %s", err)
-		}
-		zg.AddGlobal(n,mLisp)
+		zg.AddFunction(n,HashGet(m.Map()))
 	}
 	err = zg.LoadString(q)
 	if err != nil {

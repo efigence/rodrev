@@ -41,7 +41,7 @@ var DefaultConfig = Config{
 
 type Puppet struct {
 	node           *zerosvc.Node
-	facts          *Facts
+	facts          Facts
 	lastRunSummary LastRunSummary
 	lock           sync.RWMutex
 	l              *zap.SugaredLogger
@@ -74,6 +74,9 @@ func New(cfg Config) (*Puppet, error) {
 	if len(cfg.LastRunReportYAML) == 0 {
 		cfg.LastRunReportYAML = DefaultConfig.LastRunReportYAML
 	}
+	if len(cfg.FactsYAML) == 0 {
+		cfg.FactsYAML = DefaultConfig.FactsYAML
+	}
 	if cfg.RefreshInterval == 0 {
 		cfg.RefreshInterval = DefaultConfig.RefreshInterval
 	}
@@ -84,7 +87,14 @@ func New(cfg Config) (*Puppet, error) {
 	p.rng = cfg.Runtime.SeededPRNG()
 	p.query = cfg.Query
 	p.runtime = cfg.Runtime
-	p.facts = &Facts{}
+	p.facts,err = LoadFacts(cfg.FactsYAML)
+	if err != nil {
+		p.l.Errorf("error loading facts: %s")
+	}
+	err = cfg.Query.RegisterMap("fact", &p.facts)
+	if err != nil {
+		p.l.Errorf("error registering facts in query engine: %s")
+	}
 
 	if len(p.puppetPath) == 0 {
 		return nil, fmt.Errorf("can't find puppet in PATH or in /usr/local/bin")
