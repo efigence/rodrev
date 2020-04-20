@@ -7,13 +7,15 @@ require (
 	github.com/glycerine/greenpack v5.1.1+incompatible // indirect
 	github.com/glycerine/liner v0.0.0-20160121172638-72909af234e0 // indirect
 	github.com/glycerine/zygomys v5.1.2+incompatible
+	github.com/k0kubun/pp v3.0.1+incompatible
+	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/shurcooL/go v0.0.0-20191216061654-b114cc39af9f // indirect
 	github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041 // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/tinylib/msgp v1.1.2 // indirect
-	github.com/ugorji/go/codec v1.1.7 // indirect
+	github.com/ugorji/go v1.1.7 // indirect
 	github.com/urfave/cli v1.22.3
 	github.com/zerosvc/go-zerosvc v0.1.2-0.20200420071404-099e390dc801
 	go.uber.org/zap v1.14.1
