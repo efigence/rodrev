@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"github.com/efigence/rodrev/common"
 	"github.com/glycerine/zygomys/zygo"
-	"sync"
 )
 
 
 type Engine struct {
 	r *common.Runtime
-	zg *zygo.Zlisp
-	l sync.Mutex
 }
 
 
@@ -19,43 +16,37 @@ func NewQueryEngine(r *common.Runtime) *Engine {
 	if r == nil {
 		panic("need runtime")
 	}
-	var e Engine
-	e.zg = zygo.NewZlispSandbox()
-	e.zg.ImportRegex()
-	e.zg.ImportRandom()
-	e.zg.AddFunction("regex", FuzzyCompareFunction)
-	e.zg.AddFunction("regexp", FuzzyCompareFunction)
-	e.r = r
-
-	return &e
+	return &Engine{r: r}
 }
 
 
 // ParseBool parses query and returns true if return is true or nonempty string, or > 0 numeric value
 func (e *Engine) ParseBool(q string) (bool,error) {
 	vars := e.r.Cfg.NodeMeta
-	e.l.Lock()
-	defer e.l.Unlock()
-	e.zg.Clear()
-	varsLisp, err := zygo.GoToSexp(vars, e.zg)
+
+	zg := zygo.NewZlispSandbox()
+	defer zg.Stop() // else it WILL leak memory - it uses goroutines underneath
+	zg.ImportRegex()
+	zg.ImportRandom()
+	zg.AddFunction("regex", FuzzyCompareFunction)
+	varsLisp, err := zygo.GoToSexp(vars, zg)
 	if err != nil {
 		return false, err
 	}
-	e.zg.AddGlobal("node", varsLisp)
-	err = e.zg.LoadString(q)
+	zg.AddGlobal("node", varsLisp)
+	err = zg.LoadString(q)
 	if err != nil {
 		return false, fmt.Errorf("error parsing query [%s]: %s", q, err)
 	}
 	iters := 0
-	e.zg.AddPreHook(
+	zg.AddPreHook(
 		func(zg *zygo.Zlisp, s string, se []zygo.Sexp) {
 			iters++
 			if iters > 1000 {
 				zg.Clear()
 			}
 		})
-	expr, err := e.zg.Run()
-	e.zg.Clear()
+	expr, err := zg.Run()
 	if iters >= 1000 {
 		return false, fmt.Errorf("query [%s]: iterations limit exceeded: %d", q, iters)
 	}
