@@ -43,7 +43,7 @@ func (p *Puppet) run(opt RunOptions) {
 		time.Sleep(opt.Delay)
 	}
 	p.l.Info("running puppet")
-	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize")
+	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize", "--verbose","--no-splay")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		p.l.Errorf("error attaching stdin: %s", err)
