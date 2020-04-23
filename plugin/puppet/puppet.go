@@ -43,6 +43,7 @@ type Puppet struct {
 	node           *zerosvc.Node
 	facts          Facts
 	lastRunSummary LastRunSummary
+	runStatus      RunStatus
 	lock           sync.RWMutex
 	l              *zap.SugaredLogger
 	cfg            Config
