@@ -13,15 +13,14 @@ import (
 )
 
 type Daemon struct {
-	node   *zerosvc.Node
+	node    *zerosvc.Node
 	runtime *common.Runtime
-	query  *query.Engine
+	query   *query.Engine
 
 	l      *zap.SugaredLogger
 	prefix string
 	fqdn   string
 }
-
 
 func New(cfg config.Config) (*Daemon, error) {
 	var d Daemon
@@ -29,7 +28,7 @@ func New(cfg config.Config) (*Daemon, error) {
 	// TODO load from cert
 	d.fqdn = util.GetFQDN()
 	d.l = cfg.Logger
-	tr := zerosvc.NewTransport(zerosvc.TransportMQTT,cfg.MQAddress, zerosvc.TransportMQTTConfig{
+	tr := zerosvc.NewTransport(zerosvc.TransportMQTT, cfg.MQAddress, zerosvc.TransportMQTTConfig{
 		// cleanup retained heartbeat by sending empty message
 		// no TTL in MQTTv3
 		LastWillTopic:  cfg.MQPrefix + "heartbeat/" + d.fqdn,
@@ -58,7 +57,7 @@ func New(cfg config.Config) (*Daemon, error) {
 		MQPrefix: cfg.MQPrefix,
 		Log:      cfg.Logger,
 		Metadata: cfg.NodeMeta,
-		Cfg: cfg,
+		Cfg:      cfg,
 	}
 	d.runtime = runtime
 	d.query = query.NewQueryEngine(runtime)
@@ -66,7 +65,7 @@ func New(cfg config.Config) (*Daemon, error) {
 
 	pu, err := puppet.New(puppet.Config{
 		Runtime: runtime,
-		Query: d.query,
+		Query:   d.query,
 	})
 	if err != nil {
 		return nil, err

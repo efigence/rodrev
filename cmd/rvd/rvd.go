@@ -15,7 +15,6 @@ import (
 	"sort"
 	"syscall"
 	"time"
-
 )
 import _ "net/http/pprof"
 
@@ -138,6 +137,9 @@ func main() {
 
 		log.Infof("Starting %s version: %s", app.Name, version)
 		log.Infof("FQDN: %s", util.GetFQDN())
+		if debug {
+			cfg.Debug = debug
+		}
 		d, err := daemon.New(cfg)
 
 		if err != nil {
@@ -149,7 +151,6 @@ func main() {
 		return nil
 	}
 	app.Commands = []cli.Command{}
-
 
 	// to sort do that
 	sort.Sort(cli.FlagsByName(app.Flags))

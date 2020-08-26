@@ -1,5 +1,7 @@
 module github.com/efigence/rodrev
 
+go 1.11
+
 require (
 	github.com/XANi/go-yamlcfg v0.2.0
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
@@ -17,7 +19,7 @@ require (
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/ugorji/go v1.1.7 // indirect
 	github.com/urfave/cli v1.22.3
-	github.com/zerosvc/go-zerosvc v0.1.2-0.20200420071404-099e390dc801
+	github.com/zerosvc/go-zerosvc v0.1.2
 	go.uber.org/zap v1.14.1
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c

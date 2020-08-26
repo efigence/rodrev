@@ -23,12 +23,19 @@ func MergeCliConfig(cfg *config.Config, c *cli.Context) {
 	if len(u.Path) == 0 {
 		u.Path = "/"
 	}
-	u.Query().Set("kurwa", "mac")
-	if len(u.Query().Get("ca")) == 0 {
-		u.RawQuery = u.RawQuery + "&ca=" + url.QueryEscape(cfg.CA)
+	ca := u.Query().Get("ca")
+	crt := u.Query().Get("cert")
+	if len(ca) == 0 {
+		ca = url.QueryEscape(cfg.CA)
 	}
-	if len(u.Query().Get("cert")) == 0 {
-		u.RawQuery = u.RawQuery + "&cert=" + url.QueryEscape(cfg.ClientCert)
+	if len(crt) == 0 {
+		crt = url.QueryEscape(cfg.ClientCert)
+	}
+	if len(ca) > 0 {
+		u.RawQuery = u.RawQuery + "&ca=" + ca
+	}
+	if len(crt) > 0 {
+		u.RawQuery = u.RawQuery + "&cert=" + crt
 	}
 	cfg.MQAddress = u.String()
 

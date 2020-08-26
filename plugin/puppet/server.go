@@ -18,7 +18,7 @@ func (p *Puppet) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(),err)
+			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(), err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
@@ -46,7 +46,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 			return fmt.Errorf("remote query error: %s", err)
 		}
 		if !ok {
-			p.l.Debugf("node skipped by query filter %s",cmd.Filter)
+			p.l.Debugf("node skipped by query filter %s", cmd.Filter)
 			return nil
 		}
 	}
@@ -101,6 +101,7 @@ func (p *Puppet) backgroundWorker() {
 	for {
 		p.updateLastRunSummary()
 		p.updateFacts()
+		p.updateClasses()
 		time.Sleep(p.cfg.RefreshInterval)
 
 	}
@@ -126,6 +127,14 @@ func (p *Puppet) updateFacts() {
 	err := p.facts.UpdateFacts()
 	if err != nil {
 		p.l.Warnf("error updating facts: %s", err)
+	}
+
+}
+
+func (p *Puppet) updateClasses() {
+	err := p.classes.UpdateClasses()
+	if err != nil {
+		p.l.Warnf("error updating classes: %s", err)
 	}
 
 }

@@ -9,13 +9,14 @@ import (
 )
 
 type Config struct {
-	MQPrefix   string `yaml:"mq_prefix,omitempty"`
-	MQAddress  string `yaml:"mq_address,omitempty"`
-	CA         string `yaml:"ca_certs,omitempty"`
-	ClientCert string `yaml:"client_cert,omitempty"`
-	NodeMeta map[string]interface{} `yaml:"node_meta,omitempty"`
-	Logger *zap.SugaredLogger `yaml:"-"`
-	Version string `yaml:"-"`
+	MQPrefix   string                 `yaml:"mq_prefix,omitempty"`
+	MQAddress  string                 `yaml:"mq_address,omitempty"`
+	CA         string                 `yaml:"ca_certs,omitempty"`
+	ClientCert string                 `yaml:"client_cert,omitempty"`
+	NodeMeta   map[string]interface{} `yaml:"node_meta,omitempty"`
+	Logger     *zap.SugaredLogger     `yaml:"-"`
+	Version    string                 `yaml:"-"`
+	Debug      bool                   `yaml:"debug,omitempty"`
 	configPath string
 }
 
@@ -46,12 +47,11 @@ func (c *Config) GetConfigPath() string {
 	return c.configPath
 }
 
-func (c *Config)Validate() {
+func (c *Config) Validate() {
 	if c.NodeMeta == nil {
-		c.NodeMeta = make(map[string]interface{},0)
+		c.NodeMeta = make(map[string]interface{}, 0)
 	}
-	if _,ok :=  c.NodeMeta["fqdn"] ; !ok{
+	if _, ok := c.NodeMeta["fqdn"]; !ok {
 		c.NodeMeta["fqdn"] = zerosvc.GetFQDN()
 	}
 }
-

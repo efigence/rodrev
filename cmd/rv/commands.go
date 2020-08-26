@@ -73,7 +73,7 @@ func StatusRodrev(c *cli.Context) error {
 func StatusPuppet(c *cli.Context) error {
 	cfg, runtime := Init(c)
 	_ = cfg
-	status := client.PuppetStatus(&runtime,c.GlobalString("filter"))
+	status := client.PuppetStatus(&runtime, c.GlobalString("filter"))
 
 	switch c.GlobalString("output-format") {
 	case outStderr:
@@ -96,7 +96,6 @@ func StatusPuppet(c *cli.Context) error {
 			"duration",
 			"puppet_version",
 			"config_version",
-
 		})
 		for node, summary := range status {
 			totalDuration := "0"
@@ -111,7 +110,6 @@ func StatusPuppet(c *cli.Context) error {
 				totalDuration,
 				summary.Version.Puppet,
 				summary.Version.Config,
-
 			})
 		}
 		csvW.Flush()

@@ -6,38 +6,34 @@ import (
 	"github.com/glycerine/zygomys/zygo"
 )
 
-
 type Engine struct {
-	r *common.Runtime
+	r       *common.Runtime
 	dataMap map[string]MapGetter
 }
-
 
 func NewQueryEngine(r *common.Runtime) *Engine {
 	if r == nil {
 		panic("need runtime")
 	}
 	return &Engine{
-		r: r,
-		dataMap: make(map[string]MapGetter,0),
+		r:       r,
+		dataMap: make(map[string]MapGetter, 0),
 	}
 }
 
-
 // MapGetter returns reference to a map
 type MapGetter interface {
-	 Map() *map[string]interface{}
+	Map() *map[string]interface{}
 }
 
 func (e *Engine) RegisterMap(name string, m MapGetter) error {
 	e.dataMap[name] = m
 	return nil
 
-
 }
 
 // ParseBool parses query and returns true if return is true or nonempty string, or > 0 numeric value
-func (e *Engine) ParseBool(q string) (bool,error) {
+func (e *Engine) ParseBool(q string) (bool, error) {
 	vars := e.r.Cfg.NodeMeta
 
 	zg := zygo.NewZlispSandbox()
@@ -53,7 +49,7 @@ func (e *Engine) ParseBool(q string) (bool,error) {
 	}
 	zg.AddGlobal("node", varsLisp)
 	for n, m := range e.dataMap {
-		zg.AddFunction(n,HashGet(m.Map()))
+		zg.AddFunction(n, HashGet(m.Map()))
 	}
 	err = zg.LoadString(q)
 	if err != nil {
@@ -90,6 +86,6 @@ func (e *Engine) ParseBool(q string) (bool,error) {
 			return false, nil
 		}
 	default:
-		return false, fmt.Errorf("query return type %+v[%T] not supported, make your query return bool (or string/int > 0)",expr,expr)
+		return false, fmt.Errorf("query return type %+v[%T] not supported, make your query return bool (or string/int > 0)", expr, expr)
 	}
 }

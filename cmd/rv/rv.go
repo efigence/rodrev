@@ -24,7 +24,6 @@ func init() {
 	InitLog()
 }
 
-
 func InitLog() {
 	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
 	// naive systemd detection. Drop timestamp if running under it
@@ -36,7 +35,7 @@ func InitLog() {
 	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
 	consoleStderr := zapcore.Lock(os.Stderr)
 	_ = consoleStderr
-	filterAll  := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return true })
+	filterAll := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return true })
 	filterHighPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= zapcore.ErrorLevel
 	})
@@ -104,26 +103,26 @@ func main() {
 					Usage: "node to run puppet on. 'all' to run on all nodes (SET DELAY)",
 				},
 				cli.StringFlag{
-					Name:        "filter,f,query",
-					Usage:       "set a filter expression for nodes",
+					Name:  "filter,f,query",
+					Usage: "set a filter expression for nodes",
 				},
 				cli.DurationFlag{
 					Name:  "random-delay,delay",
 					Usage: "add random delay to each run. Use when running many at once",
 				},
 			},
-			Subcommands: []cli.Command {
+			Subcommands: []cli.Command{
 				{
-					Name: "run",
+					Name:  "run",
 					Usage: "run puppet on one or more machines. Needs --target. Specify --target all to run on all discovered ones",
 					Flags: []cli.Flag{
 						cli.StringFlag{
-							Name:  "target",
-							Usage: "node to run puppet on. 'all' to run on all nodes (SET DELAY)",
+							Name:     "target",
+							Usage:    "node to run puppet on. 'all' to run on all nodes (SET DELAY)",
 							Required: true,
 						},
 					},
-					Action : func(c *cli.Context) error {
+					Action: func(c *cli.Context) error {
 						cfg, runtime := Init(c)
 						_ = cfg
 						target := c.String("target")

@@ -8,8 +8,8 @@ import (
 
 type Facts struct {
 	facts *map[string]interface{}
-	path string
-	l sync.Mutex
+	path  string
+	l     sync.Mutex
 }
 
 // LoadFacts creates fact structure and loads fact into it
@@ -18,17 +18,23 @@ func LoadFacts(path string) (Facts, error) {
 	var f Facts
 	f.path = path
 	fd, err := os.Open(path)
-	if err != nil {return f,err}
+	if err != nil {
+		return f, err
+	}
 	var facts map[string]interface{}
 	err = yaml.NewDecoder(fd).Decode(&facts)
 	f.facts = &facts
-	if err != nil {return f,err}
-	return f,nil
+	if err != nil {
+		return f, err
+	}
+	return f, nil
 }
 
 func (f *Facts) UpdateFacts() error {
 	fd, err := os.Open(f.path)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	var facts map[string]interface{}
 	err = yaml.NewDecoder(fd).Decode(&facts)
 	defer fd.Close()
