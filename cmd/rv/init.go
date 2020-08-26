@@ -53,6 +53,7 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 		Node:     node,
 		MQPrefix: cfg.MQPrefix,
 		Log:      log,
+		Debug:    debug,
 	}
 	outputMode := c.GlobalString("output-format")
 	outputModeRe := regexp.MustCompile(

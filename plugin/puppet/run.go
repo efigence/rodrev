@@ -12,14 +12,13 @@ type RunStatus struct {
 	// run was scheduled
 	Scheduled bool
 	// runner is busy, either running or waiting for start time
-	Busy     bool
+	Busy bool
 	// node is in downtime
 	Downtime bool
 	// puppet agent started
-	Started  bool
+	Started bool
 	// puppet agent is applying catalog
 	Applying bool
-
 }
 
 type RunOptions struct {
@@ -61,7 +60,7 @@ func (p *Puppet) run(opt RunOptions) {
 		time.Sleep(opt.Delay)
 	}
 	p.l.Info("running puppet")
-	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize", "--verbose","--no-splay","--color=false")
+	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize", "--verbose", "--no-splay", "--color=false")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		p.l.Errorf("error attaching stdin: %s", err)
@@ -119,7 +118,7 @@ func (p *Puppet) run(opt RunOptions) {
 		return
 	}
 	p.l.Infof("puppet run finished")
-	
+
 	return
 
 }

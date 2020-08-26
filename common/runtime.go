@@ -20,6 +20,7 @@ type Runtime struct {
 	Cfg      config.Config
 	Metadata map[string]interface{}
 	Log      *zap.SugaredLogger
+	Debug    bool
 }
 
 // GetReplyChan() returns randomly generated channel for replies

@@ -21,6 +21,7 @@ type Config struct {
 	LastRunSummaryYAML string        `yaml:"last_run_summary"`
 	LastRunReportYAML  string        `yaml:"last_run_report"`
 	FactsYAML          string        `yaml:"facts"`
+	ClassfilePath      string        `yaml:"classfile_path"`
 	RefreshInterval    time.Duration `yaml:"refresh_interval"`
 	FQDN               string
 	Runtime            *common.Runtime
@@ -35,13 +36,15 @@ const (
 var DefaultConfig = Config{
 	LastRunReportYAML:  "/var/lib/puppet/state/last_run_report.yaml",
 	LastRunSummaryYAML: "/var/lib/puppet/state/last_run_summary.yaml",
-	FactsYAML: "/var/lib/puppet/facts.yaml",
+	FactsYAML:          "/var/lib/puppet/facts.yaml",
+	ClassfilePath:      "/var/lib/puppet/classes.txt",
 	RefreshInterval:    time.Minute,
 }
 
 type Puppet struct {
 	node           *zerosvc.Node
 	facts          Facts
+	classes        *Classes
 	lastRunSummary LastRunSummary
 	runStatus      RunStatus
 	lock           sync.RWMutex
@@ -78,6 +81,9 @@ func New(cfg Config) (*Puppet, error) {
 	if len(cfg.FactsYAML) == 0 {
 		cfg.FactsYAML = DefaultConfig.FactsYAML
 	}
+	if len(cfg.ClassfilePath) == 0 {
+		cfg.ClassfilePath = DefaultConfig.ClassfilePath
+	}
 	if cfg.RefreshInterval == 0 {
 		cfg.RefreshInterval = DefaultConfig.RefreshInterval
 	}
@@ -88,14 +94,23 @@ func New(cfg Config) (*Puppet, error) {
 	p.rng = cfg.Runtime.SeededPRNG()
 	p.query = cfg.Query
 	p.runtime = cfg.Runtime
-	p.facts,err = LoadFacts(cfg.FactsYAML)
+	p.facts, err = LoadFacts(cfg.FactsYAML)
 	if err != nil {
-		p.l.Errorf("error loading facts: %s")
+		p.l.Errorf("error loading facts: %s", err)
+	}
+	p.classes, err = LoadClasses(cfg.ClassfilePath)
+	if err != nil {
+		p.l.Errorf("error loading classes: %s", err)
 	}
 	err = cfg.Query.RegisterMap("fact", &p.facts)
 	if err != nil {
 		p.l.Errorf("error registering facts in query engine: %s")
 	}
+	err = cfg.Query.RegisterMap("class", p.classes)
+	if err != nil {
+		p.l.Errorf("error registering classes in query engine: %s")
+	}
+	fmt.Sprintf("%+v", p.classes.Map())
 
 	if len(p.puppetPath) == 0 {
 		return nil, fmt.Errorf("can't find puppet in PATH or in /usr/local/bin")
@@ -109,7 +124,7 @@ func New(cfg Config) (*Puppet, error) {
 
 type PuppetCmdSend struct {
 	Command    string      `json:"cmd"`
-	Filter     string          `json:"filter,omitempty"`
+	Filter     string      `json:"filter,omitempty"`
 	Parameters interface{} `json:"params"`
 }
 

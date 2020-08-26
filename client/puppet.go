@@ -59,7 +59,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime, node string,filter string, delay time.Duration) (chan zerosvc.Event) {
+func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duration) chan zerosvc.Event {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
@@ -68,7 +68,7 @@ func PuppetRun(r *common.Runtime, node string,filter string, delay time.Duration
 	query := r.Node.NewEvent()
 	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
 		Command:    puppet.Run,
-		Filter: filter,
+		Filter:     filter,
 		Parameters: puppet.RunOptions{Delay: delay, RandomizeDelay: true},
 	}))
 

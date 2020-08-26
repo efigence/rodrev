@@ -14,5 +14,12 @@ There is few added functions and global variables:
 * `fact` function returns fact value:
   * `(== (fact "virtual") "kvm")` checks whether "virtual" fact matches "kvm"
   * request nested entries by just passing more parameters; `(== (fact "processors" "count") 4)` returns value of the `$processors["count"]` fact
+* `class` returns present classes, could be used like `(== (class "systemd::common") true)`
+
+
+### Data
+
   
-  
+### Examples
+
+* `rv --out=csv puppet --filter '(== (class "systemd::common") true)'  status` - list puppet nodes containing that class
