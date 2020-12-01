@@ -5,6 +5,7 @@ import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/daemon"
+	"github.com/efigence/rodrev/hvminfo"
 	"github.com/efigence/rodrev/util"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
@@ -93,6 +94,8 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
+
+
 		if len(c.String("profile-addr")) > 0 {
 			go func() {
 				log.Errorf("error starting debug port: %s", http.ListenAndServe(c.String("profile-addr"), nil))
@@ -100,12 +103,13 @@ func main() {
 		}
 		cfgFiles := []string{
 			"/etc/rodrev/server.conf",
+			"./cfg/server-local.yaml",
 			"./cfg/server.yaml",
 		}
 		var cfg config.Config
 		err := yamlcfg.LoadConfig(cfgFiles, &cfg)
 		if err != nil {
-			log.Errorf("error loading config")
+			log.Errorf("error loading config: %s",err)
 		} else {
 			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
@@ -140,12 +144,19 @@ func main() {
 		if debug {
 			cfg.Debug = debug
 		}
+		if cfg.HVMInfoServer != nil {
+			serverCfg := *cfg.HVMInfoServer
+			serverCfg.Info = hvminfo.HVMInfo{}.Default()
+			serverCfg.Logger = log
+			go hvminfo.Run(serverCfg)
+		}
 		d, err := daemon.New(cfg)
 
 		if err != nil {
 			log.Errorf("error starting daemon: %s", err)
 			exit <- 1
 		}
+
 		_ = d
 
 		return nil

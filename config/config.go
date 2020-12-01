@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/hvminfo"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -14,6 +15,7 @@ type Config struct {
 	CA         string                 `yaml:"ca_certs,omitempty"`
 	ClientCert string                 `yaml:"client_cert,omitempty"`
 	NodeMeta   map[string]interface{} `yaml:"node_meta,omitempty"`
+	HVMInfoServer   *hvminfo.ConfigServer `yaml:"hvm_info_server,omitempty"`
 	Logger     *zap.SugaredLogger     `yaml:"-"`
 	Version    string                 `yaml:"-"`
 	Debug      bool                   `yaml:"debug,omitempty"`
