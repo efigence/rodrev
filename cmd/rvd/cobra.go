@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
+	"fmt"
 	"os/signal"
 	"syscall"
 	"time"
@@ -81,6 +82,14 @@ var rootCmd = &cobra.Command{
 
 		_ = d
 },}
+var versionCmd = &cobra.Command{
+	Use: "version",
+	Short: "show version",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(version)
+		os.Exit(0)
+	},
+}
 
 func cobraInit() {
 	cobraInitFlags()
@@ -116,5 +125,6 @@ func cobraInitFlags() {
 
 
 func cobraInitCommands() {
+	rootCmd.AddCommand(versionCmd)
 }
 

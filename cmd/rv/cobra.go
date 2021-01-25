@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/efigence/rodrev/client"
 	"github.com/spf13/cobra"
 	"os"
@@ -14,6 +15,15 @@ var rootCmd = &cobra.Command{
 	Run:  func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(1)
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use: "version",
+	Short: "show version",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(version)
+		os.Exit(0)
 	},
 }
 
@@ -159,6 +169,7 @@ func cobraInitFlags() {
 	)
 }
 func cobraInitCommands() {
+	rootCmd.AddCommand(versionCmd)
 	puppetCmd.AddCommand(puppetRunCmd)
 	puppetCmd.AddCommand(puppetStatusCmd)
 	rootCmd.AddCommand(puppetCmd)
