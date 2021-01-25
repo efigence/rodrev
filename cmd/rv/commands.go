@@ -4,7 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"github.com/efigence/rodrev/client"
-	"github.com/urfave/cli"
+	"github.com/spf13/cobra"
 	"os"
 	"sort"
 	"strconv"
@@ -12,16 +12,17 @@ import (
 	"time"
 )
 
-func StatusRodrev(c *cli.Context) error {
-	cfg, runtime := Init(c)
+func StatusRodrev(cmd *cobra.Command) error {
+	cfg, runtime := Init(cmd)
 	_ = cfg
+	c := cmd.Flags()
 	log.Info("running service discovery")
 	services, nodesActive, nodesStale, err := client.Discover(&runtime)
 	if err != nil {
 		log.Errorf("error running discovery: %s", err)
 	}
 	log.Infof("services:")
-	switch c.GlobalString("output-format") {
+	switch stringOrPanic(c.GetString("output-format")) {
 	case outStderr:
 		for service, nodes := range services {
 			log.Infof("  %s:", service)
@@ -70,12 +71,13 @@ func StatusRodrev(c *cli.Context) error {
 
 }
 
-func StatusPuppet(c *cli.Context) error {
-	cfg, runtime := Init(c)
+func StatusPuppet(cmd *cobra.Command) error {
+	cfg, runtime := Init(cmd)
+	c := cmd.Flags()
 	_ = cfg
-	status := client.PuppetStatus(&runtime, c.GlobalString("filter"))
+	status := client.PuppetStatus(&runtime, stringOrPanic(c.GetString("filter") ))
 
-	switch c.GlobalString("output-format") {
+	switch stringOrPanic(c.GetString("output-format")) {
 	case outStderr:
 		log.Info("puppet status")
 		for node, summary := range status {

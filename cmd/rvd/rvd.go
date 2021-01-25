@@ -1,21 +1,10 @@
 package main
 
 import (
-	"github.com/XANi/go-yamlcfg"
-	"github.com/efigence/rodrev/common"
-	"github.com/efigence/rodrev/config"
-	"github.com/efigence/rodrev/daemon"
-	"github.com/efigence/rodrev/hvminfo"
-	"github.com/efigence/rodrev/util"
-	"github.com/urfave/cli"
+	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
 	"os"
-	"os/signal"
-	"sort"
-	"syscall"
-	"time"
 )
 import _ "net/http/pprof"
 
@@ -74,98 +63,12 @@ func setupLogger() {
 }
 
 func main() {
-
-	app := cli.NewApp()
-	app.Name = "rvd"
-	app.Description = "Rodrev server"
-	app.Version = version
-	app.HideHelp = true
-	app.Flags = []cli.Flag{
-		cli.BoolFlag{Name: "help, h", Usage: "show help"},
-		cli.BoolFlag{Name: "debug, d", Usage: "debug"},
-		cli.StringFlag{
-			Name:   "mqtt-url",
-			Usage:  "URL for the MQ server. Use tls:// to enable encryption (default tcp://mqtt:mqtt@127.0.0.1:1883)",
-			EnvVar: "RF_MQTT_URL",
-		},
-		cli.StringFlag{
-			Name:  "profile-addr",
-			Usage: "run profiler under this addr. example: localhost:6060",
-		},
+	cobraInit()
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Printf("error: %s", err)
+		os.Exit(1)
 	}
-	app.Action = func(c *cli.Context) error {
 
-
-		if len(c.String("profile-addr")) > 0 {
-			go func() {
-				log.Errorf("error starting debug port: %s", http.ListenAndServe(c.String("profile-addr"), nil))
-			}()
-		}
-		cfgFiles := []string{
-			"/etc/rodrev/server.conf",
-			"./cfg/server-local.yaml",
-			"./cfg/server.yaml",
-		}
-		var cfg config.Config
-		err := yamlcfg.LoadConfig(cfgFiles, &cfg)
-		if err != nil {
-			log.Errorf("error loading config: %s",err)
-		} else {
-			log.Infof("loaded config from %s", cfg.GetConfigPath())
-		}
-		common.MergeCliConfig(&cfg, c)
-		log.Warnf("%+v", cfg)
-
-		debug = c.Bool("debug")
-
-		if c.Bool("help") {
-			cli.ShowAppHelp(c)
-			os.Exit(1)
-		}
-		// reinit logger with cli settings
-		setupLogger()
-		cfg.Logger = log
-		cfg.Version = version
-		log.Debugf("MQ server url %s", cfg.MQAddress)
-		hup := make(chan os.Signal, 1)
-		signal.Notify(hup, syscall.SIGHUP)
-
-		go func() {
-			for sig := range hup {
-				println(sig)
-				log.Warnf("got HUP, exiting in 1 minute")
-				time.Sleep(time.Minute)
-				exit <- 0
-			}
-		}()
-
-		log.Infof("Starting %s version: %s", app.Name, version)
-		log.Infof("FQDN: %s", util.GetFQDN())
-		if debug {
-			cfg.Debug = debug
-		}
-		if cfg.HVMInfoServer != nil {
-			serverCfg := *cfg.HVMInfoServer
-			serverCfg.Info = hvminfo.HVMInfo{}.Default()
-			serverCfg.Logger = log
-			go hvminfo.Run(serverCfg)
-		}
-		d, err := daemon.New(cfg)
-
-		if err != nil {
-			log.Errorf("error starting daemon: %s", err)
-			exit <- 1
-		}
-
-		_ = d
-
-		return nil
-	}
-	app.Commands = []cli.Command{}
-
-	// to sort do that
-	sort.Sort(cli.FlagsByName(app.Flags))
-	sort.Sort(cli.CommandsByName(app.Commands))
-	app.Run(os.Args)
 	os.Exit(<-exit)
 }
