@@ -4,6 +4,7 @@ import (
 	"github.com/efigence/rodrev/client"
 	"github.com/spf13/cobra"
 	"os"
+	"time"
 )
 // Root
 var rootCmd = &cobra.Command{
@@ -12,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Long: "rodrev client/cli",
 	Run:  func(cmd *cobra.Command, args []string) {
 		cmd.Help()
-		quiet, _ = cmd.Flags().GetBool("quiet")
+		os.Exit(1)
 	},
 }
 
@@ -21,8 +22,10 @@ var rootCmd = &cobra.Command{
 var puppetCmd = &cobra.Command{
 	Use: "puppet",
 	Short: "puppet management (run/status/etc)",
+//	Args: cobra.MinimumNArgs(1),
 	Run:  func(cmd *cobra.Command, args []string) {
 		cmd.Help()
+		os.Exit(1)
 	},
 }
 
@@ -37,18 +40,25 @@ var puppetRunCmd = &cobra.Command{
 		if len(target) == 0 {
 			target = stringOrPanic(c.GetString("target"))
 		}
+		randomDelay :=  durationOrPanic(c.GetDuration("random-delay"))
 		if len(target) == 0 {
 			log.Warn("need --target parameter")
 			os.Exit(1)
 		}
-		if stringOrPanic(c.GetString("node")) == "all" && durationOrPanic(c.GetDuration("random-delay")) == 0 {
+		if stringOrPanic(c.GetString("node")) == "all" &&
+			randomDelay == 0 &&
+			len(stringOrPanic(c.GetString("filter"))) > 3 {
+			randomDelay = time.Second
+		}
+		if stringOrPanic(c.GetString("node")) == "all" && randomDelay == 0 {
 			log.Errorf("do not run all 'all' without delay, if you REALLY need to run all nodes at once set random-delay to '1s' ")
+			cmd.Help()
 			os.Exit(1)
 		}
 		filter := stringOrPanic(c.GetString("filter"))
-		log.Warnf(filter)
-		client.PuppetRun(&runtime, target, filter, durationOrPanic(c.GetDuration("random-delay")))
-		log.Warnf("running puppet on %s", stringOrPanic(c.GetString("node")))
+		log.Warnf("filter query: %s", filter)
+		client.PuppetRun(&runtime, target, filter, randomDelay)
+		log.Warnf("sending  puppet run request to %s", stringOrPanic(c.GetString("node")))
 	},
 }
 
