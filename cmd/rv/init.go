@@ -1,35 +1,57 @@
 package main
 
 import (
+	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/XANi/go-yamlcfg"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	uuid "github.com/satori/go.uuid"
-	"github.com/urfave/cli"
 	"github.com/zerosvc/go-zerosvc"
 )
 
-func Init(c *cli.Context) (config.Config, common.Runtime) {
+func stringOrPanic (s string,err error) string {
+	if err != nil {
+		panic(fmt.Sprintf("error getting argument: %s",err))
+	}
+	return s
+}
+
+func boolOrPanic (b bool,err error) bool {
+	if err != nil {
+		panic(fmt.Sprintf("error getting argument: %s",err))
+	}
+	return b
+}
+func durationOrPanic (d time.Duration,err error) time.Duration {
+	if err != nil {
+		panic(fmt.Sprintf("error getting argument: %s",err))
+	}
+	return d
+}
+func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	cfgFiles := []string{
 		"$HOME/.config/rodrev/client.conf",
 		"/etc/rodrev/client.conf",
 		"./cfg/client.yaml",
 	}
+	c := cmd.Flags()
 	var cfg config.Config
 	err := yamlcfg.LoadConfig(cfgFiles, &cfg)
 	if err != nil {
-		// if URL is unset
-		if len(c.String("mqtt-url")) == 0 {
-			log.Errorf("error loading config:", err)
+		url, err:=c.GetString("mqtt-url")
+		if url == "" || err != nil {
+			log.Errorf("error loading config and no cmdline mq url: ", err)
 		}
 	}
-	common.MergeCliConfig(&cfg, c)
-	debug = c.GlobalBool("debug")
-	quiet = c.GlobalBool("quiet")
+	common.MergeCliConfig(&cfg, cmd)
+	debug = boolOrPanic(c.GetBool("debug"))
+	quiet = boolOrPanic(c.GetBool("quiet"))
 	InitLog()
 
 	log.Infof("config: %s", cfg.GetConfigPath())
@@ -55,7 +77,7 @@ func Init(c *cli.Context) (config.Config, common.Runtime) {
 		Log:      log,
 		Debug:    debug,
 	}
-	outputMode := c.GlobalString("output-format")
+	outputMode := stringOrPanic(c.GetString("output-format"))
 	outputModeRe := regexp.MustCompile(
 		"^" +
 			strings.Join([]string{outCsv, outJson, outStderr}, "|") +
