@@ -1,0 +1,31 @@
+@startuml
+
+state "Fence request" as fence_request
+
+fence_request: request from queue
+
+fence_request -> priority
+
+priority --> priority: if prio > 0 sleep(wait_node_interval) ; prio--
+priority --> fence_init: if prio <= 0
+priority --> no_fence: if we got remote fence message
+
+state "Other node fenced it, do nothing" as no_fence
+
+state "Initialize fencing" as fence_init: Test whether fencing works\nping ipmi/libvirt etc.
+state "Fencing failed response" as fence_response_failed: Send info that fencing failed so\nnext level can try it
+state "Begin fencing" as fence_begin
+state "Fence OK" as fence_ok
+state "Remote fence OK" as fence_ok_remote
+fence_ok_remote --> priority
+fence_init --> fence_begin: ok
+fence_init --> fence_response_failed: failed
+fence_begin --> fence_send_signal
+fence_send_signal --> fence_wait_signal: wait for response
+fence_wait_signal --> fence_send_signal: ctr < retry; ctr++
+fence_wait_signal --> fence_response_failed: ctr >= retry
+fence_send_signal --> fence_response_failed: failed
+fence_wait_signal --> fence_ok: successful
+
+
+@enduml
