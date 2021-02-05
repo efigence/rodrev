@@ -1,6 +1,11 @@
 package fence
 
-import "time"
+import (
+	"fmt"
+	"github.com/zerosvc/go-zerosvc"
+	"go.uber.org/zap"
+	"time"
+)
 
 const (
 	FenceLocalSysrq = "local_sysrq"
@@ -31,13 +36,38 @@ type FenceModule interface {
 type Fence struct {
 	cfg *Config
 	fenceModule FenceModule
+	l *zap.SugaredLogger
 }
 
 
+type FenceCmd struct {
+	Priority int
+	Node string
+}
 
 
 func New(cfg Config) (*Fence, error) {
 	var f Fence
 	f.cfg = &cfg
+	return &f, nil
+}
 
+func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
+	var cmd FenceCmd
+	err := ev.Unmarshal(&cmd)
+	f.l.Debugf("got fence request from %s",ev.NodeName())
+	if err != nil {
+		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
+	}
+	f.l.Infof("fencing %s", cmd.Node)
+	initErr, runErr := fenceSelf{}.Self(time.Second)
+	if initErr != nil {
+		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
+	}
+	err = <- runErr
+	if runErr != nil {
+		f.l.Errorf("error running fencing [%+v]: %s", cmd, err)
+	}
+
+	return nil
 }
