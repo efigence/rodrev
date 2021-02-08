@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+
+type FenceConfig struct {
+	Whitelist map[string]string
+	Type string
+	Enabled bool `yaml:"enabled"`
+}
+
 type Config struct {
 	MQPrefix   string                 `yaml:"mq_prefix,omitempty"`
 	MQAddress  string                 `yaml:"mq_address,omitempty"`
@@ -16,6 +23,7 @@ type Config struct {
 	ClientCert string                 `yaml:"client_cert,omitempty"`
 	NodeMeta   map[string]interface{} `yaml:"node_meta,omitempty"`
 	HVMInfoServer   *hvminfo.ConfigServer `yaml:"hvm_info_server,omitempty"`
+	Fence      FenceConfig            `yaml:"fence"`
 	Logger     *zap.SugaredLogger     `yaml:"-"`
 	Version    string                 `yaml:"-"`
 	Debug      bool                   `yaml:"debug,omitempty"`

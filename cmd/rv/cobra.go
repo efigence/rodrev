@@ -106,6 +106,21 @@ var statusRodrevCmd = &cobra.Command{
 	},
 }
 
+var fenceCmd = &cobra.Command{
+	Use:   "fence",
+	Short: "fencing commands",
+	Run:  func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+	},
+}
+
+
+var fenceRunCmd = &cobra.Command{
+	Use:   "run <node>",
+	Short: "Run fencing on node specified as parameter",
+	Run:   RunFence,
+}
+
 func cobraDefaultString(env string,defaultValue string) string {
 	e := os.Getenv(env)
 	if e == "" {
@@ -144,6 +159,7 @@ func cobraInitFlags() {
 		"stderr",
 		"Output format: stderr(human readable),csv,json",
 	)
+	//
 	puppetCmd.PersistentFlags().StringP(
 		"node",
 		"n",
@@ -176,4 +192,6 @@ func cobraInitCommands() {
 	statusCmd.AddCommand(statusPuppetCmd)
 	statusCmd.AddCommand(statusRodrevCmd)
 	rootCmd.AddCommand(statusCmd)
+	fenceCmd.AddCommand(fenceRunCmd)
+	rootCmd.AddCommand(fenceCmd)
 }
