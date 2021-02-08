@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/util"
 	"github.com/spf13/cobra"
 	"os"
 	"regexp"
@@ -42,6 +43,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	}
 	c := cmd.Flags()
 	var cfg config.Config
+	cfg.Logger = log
 	err := yamlcfg.LoadConfig(cfgFiles, &cfg)
 	if err != nil {
 		url, err:=c.GetString("mqtt-url")
@@ -73,6 +75,8 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 
 	runtime := common.Runtime{
 		Node:     node,
+		// TODO load from cert if possible
+		FQDN: util.GetFQDN(),
 		MQPrefix: cfg.MQPrefix,
 		Log:      log,
 		Debug:    debug,

@@ -2,6 +2,7 @@ package fence
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/config"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"time"
@@ -13,12 +14,8 @@ const (
 )
 
 
-type Config struct {
-	Whitelist map[string]string
-	Type string
-}
 
-var DefaultConfig = Config {
+var DefaultConfig = config.FenceConfig {
    Type: FenceLocalSysrq,
 }
 
@@ -34,7 +31,7 @@ type FenceModule interface {
 }
 
 type Fence struct {
-	cfg *Config
+	cfg *config.FenceConfig
 	fenceModule FenceModule
 	l *zap.SugaredLogger
 }
@@ -46,11 +43,23 @@ type FenceCmd struct {
 }
 
 
-func New(cfg Config) (*Fence, error) {
+func New(cfg config.FenceConfig) (*Fence, error) {
 	var f Fence
 	f.cfg = &cfg
 	return &f, nil
 }
+
+
+func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
+	for ev := range evCh {
+		err := p.HandleEvent(&ev)
+		if err != nil {
+			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(), err)
+		}
+	}
+	return fmt.Errorf("channel for puppet server disconnected")
+}
+
 
 func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	var cmd FenceCmd
@@ -60,7 +69,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
 	}
 	f.l.Infof("fencing %s", cmd.Node)
-	initErr, runErr := fenceSelf{}.Self(time.Second)
+	initErr, runErr := (&fenceSelf{}).Self(time.Second)
 	if initErr != nil {
 		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
 	}
