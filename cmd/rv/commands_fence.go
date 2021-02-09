@@ -1,6 +1,9 @@
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/efigence/rodrev/plugin/fence"
+	"github.com/spf13/cobra"
+)
 
 func RunFence(cmd *cobra.Command, args []string) {
 	if len(args) < 1 {
@@ -12,5 +15,7 @@ func RunFence(cmd *cobra.Command, args []string) {
 	c :=  cmd.Flags()
 	_ =runtime
 	_ = c
-	log.Infof("would fence %+v from [%s]",args,runtime.FQDN)
+	log.Infof("sending fence to %s from [%s]",args[0],runtime.FQDN)
+	err := fence.SendFence(&runtime,args[0])
+	if err != nil {log.Errorf("fence failed: %s",err)}
 }
