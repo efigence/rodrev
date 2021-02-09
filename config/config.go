@@ -12,8 +12,9 @@ import (
 
 type FenceConfig struct {
 	Whitelist map[string]string
-	Type string
-	Enabled bool `yaml:"enabled"`
+	Type      string
+	Enabled   bool               `yaml:"enabled"`
+	Logger    *zap.SugaredLogger `yaml:"-"`
 }
 
 type Config struct {
@@ -34,7 +35,7 @@ func (c *Config) GetDefaultConfig() string {
 	defaultCfg := Config{
 		MQPrefix:   "rv/",
 		MQAddress:  "tls://mq.example.com:8883",
-		ClientCert: "/path/to/certandkey.pem",
+		ClientCert: "",
 	}
 	outB, err := yaml.Marshal(&defaultCfg)
 	out := string(outB)

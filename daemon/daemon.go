@@ -86,23 +86,27 @@ func New(cfg config.Config) (*Daemon, error) {
 		}
 	}()
 	if cfg.Fence.Enabled {
-		f, err := fence.New(cfg.Fence)
+		cfg.Fence.Logger = d.l
+		f, err := fence.New(runtime,cfg.Fence)
 		_ =f
 		if err != nil {
 			// TODO alert/fail somehow
 			d.l.Errorf("starting fencing failed: %s",err)
 		}
-		for {
-			ch, err := d.node.GetEventsCh(d.prefix + "fence/" + d.fqdn)
-			if err != nil {
-				d.l.Errorf("error connecting to channel: %s", err)
+		d.l.Infof("starting fencing")
+		go func() {
+			for {
+				ch, err := d.node.GetEventsCh(d.prefix + "fence/" + d.fqdn)
+				if err != nil {
+					d.l.Errorf("error connecting to channel: %s", err)
+					time.Sleep(time.Second * 10)
+					continue
+				}
+				err = f.EventListener(ch)
+				d.l.Errorf("plugin fence exited: %s, reconnecting in 10s", err)
 				time.Sleep(time.Second * 10)
-				continue
 			}
-			err = pu.EventListener(ch)
-			d.l.Errorf("plugin fence exited: %s, reconnecting in 10s", err)
-			time.Sleep(time.Second * 10)
-		}
+		}()
 	}
 	return &d, nil
 }

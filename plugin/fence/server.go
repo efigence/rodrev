@@ -2,7 +2,9 @@ package fence
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
+	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"time"
@@ -34,6 +36,7 @@ type Fence struct {
 	cfg *config.FenceConfig
 	fenceModule FenceModule
 	l *zap.SugaredLogger
+	node *zerosvc.Node
 }
 
 
@@ -41,11 +44,17 @@ type FenceCmd struct {
 	Priority int
 	Node string
 }
+type FenceResponse struct {
+	Priority int
+	Success bool
+}
 
 
-func New(cfg config.FenceConfig) (*Fence, error) {
+func New(runtime *common.Runtime,cfg config.FenceConfig) (*Fence, error) {
 	var f Fence
 	f.cfg = &cfg
+	f.l  = cfg.Logger
+	f.node = runtime.Node
 	return &f, nil
 }
 
@@ -74,9 +83,17 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
 	}
 	err = <- runErr
-	if runErr != nil {
-		f.l.Errorf("error running fencing [%+v]: %s", cmd, err)
-	}
+	re := f.node.NewEvent()
+	re.Headers["fqdn"] = util.GetFQDN()
+	resp := FenceResponse{}
 
-	return nil
+	if err != nil {
+		f.l.Errorf("error running fencing [%+v]: %s", cmd, err)
+	} else {
+		resp.Success = true
+	}
+	re.Marshal(resp)
+	ev.Reply(re)
+
+	return err
 }

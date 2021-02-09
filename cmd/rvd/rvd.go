@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
@@ -66,7 +65,7 @@ func main() {
 	cobraInit()
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Printf("error: %s", err)
+		log.Errorf("error: %s", err)
 		os.Exit(1)
 	}
 

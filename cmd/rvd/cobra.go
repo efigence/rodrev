@@ -28,13 +28,21 @@ var rootCmd = &cobra.Command{
 					common.StringOrPanic(c.GetString("profile-addr")), nil))
 			}()
 		}
-			cfgFiles := []string{
+		cfgFiles := []string{
 			"/etc/rodrev/server.conf",
 			"./cfg/server-local.yaml",
 			"./cfg/server.yaml",
 		}
+		userCfg, err := c.GetString("config")
+		if err == nil && len(userCfg) > 0 {
+			if _, err := os.Stat(userCfg); os.IsNotExist(err) {
+				log.Panicf("config file %s does not exist", userCfg)
+			}
+			cfgFiles = append([]string{userCfg}, cfgFiles...)
+		}
+
 		var cfg config.Config
-		err := yamlcfg.LoadConfig(cfgFiles, &cfg)
+		err = yamlcfg.LoadConfig(cfgFiles, &cfg)
 		if err != nil {
 			log.Errorf("error loading config: %s",err)
 		} else {
@@ -115,11 +123,16 @@ func cobraInitFlags() {
 		cobraDefaultString("RF_MQTT_URL", ""), // do not put default there, it is in MergeCliConfig
 		"URL for the MQ server. Use tls:// to enable encryption (default: tcp://mqtt:mqtt@127.0.0.1:1883)",
 	)
-
 	rootCmd.PersistentFlags().String(
 		"profile-addr",
 		"",
 		"run profiler under this addr. example: localhost:6060",
+	)
+	rootCmd.PersistentFlags().StringP(
+		"config",
+		"c",
+		"",
+		"config file",
 	)
 }
 
