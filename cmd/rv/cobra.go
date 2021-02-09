@@ -159,6 +159,12 @@ func cobraInitFlags() {
 		"stderr",
 		"Output format: stderr(human readable),csv,json",
 	)
+	rootCmd.PersistentFlags().StringP(
+		"config",
+		"c",
+		"",
+		"config file",
+	)
 	//
 	puppetCmd.PersistentFlags().StringP(
 		"node",

@@ -36,15 +36,23 @@ func durationOrPanic (d time.Duration,err error) time.Duration {
 	return d
 }
 func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
+	c := cmd.Flags()
 	cfgFiles := []string{
 		"$HOME/.config/rodrev/client.conf",
 		"/etc/rodrev/client.conf",
+		"./cfg/client-local.yaml",
 		"./cfg/client.yaml",
 	}
-	c := cmd.Flags()
+	userCfg, err := c.GetString("config")
+	if err == nil && len(userCfg) > 0 {
+		if _, err := os.Stat(userCfg); os.IsNotExist(err) {
+			log.Panicf("config file %s does not exist", userCfg)
+		}
+		cfgFiles = append([]string{userCfg}, cfgFiles...)
+	}
 	var cfg config.Config
 	cfg.Logger = log
-	err := yamlcfg.LoadConfig(cfgFiles, &cfg)
+	err = yamlcfg.LoadConfig(cfgFiles, &cfg)
 	if err != nil {
 		url, err:=c.GetString("mqtt-url")
 		if url == "" || err != nil {

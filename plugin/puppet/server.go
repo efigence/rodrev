@@ -37,7 +37,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	re.Headers["fqdn"] = util.GetFQDN()
 	reqPath := strings.Split(ev.RoutingKey, "/")
 	if len(reqPath) < 2 {
-		return fmt.Errorf("too short path, ignoring: %s", ev.RoutingKey)
+		return fmt.Errorf("too short path, ignoring: [%s]%s", reqPath, ev.RoutingKey)
 	}
 	if len(cmd.Filter) > 0 {
 
@@ -92,7 +92,8 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
 		ev.Reply(re)
-		p.l.Warnf("unknown command %s", cmd.Command)
+		p.l.Warnf("unknown command %s [%+v] %s", cmd.Command, reqPath, ev.RoutingKey)
+
 	}
 	return nil
 }
