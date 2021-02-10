@@ -13,6 +13,6 @@ release:
 	GOARCH=arm64 go build  -ldflags "-X main.version=$(version)" -o release/rvd.arm64 cmd/rvd/*.go
 	GOARCH=386 go build  -ldflags "-X main.version=$(version)" -o release/rv.i386 cmd/rv/*.go
 	GOARCH=386 go build  -ldflags "-X main.version=$(version)" -o release/rvd.i386 cmd/rvd/*.go
-	cp script/fence_rvd.pl release/fence_rvd
+	cp scripts/fence_rvd.pl release/fence_rvd
 version:
 	@echo $(version)
