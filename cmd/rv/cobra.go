@@ -118,7 +118,13 @@ var fenceCmd = &cobra.Command{
 var fenceRunCmd = &cobra.Command{
 	Use:   "run <node>",
 	Short: "Run fencing on node specified as parameter",
-	Run:   RunFence,
+	Run:   FenceRun,
+}
+
+var fenceStatusCmd = &cobra.Command{
+	Use:   "status <node>",
+	Short: "Check whether fencing is working on node",
+	Run:   FenceStatus,
 }
 
 func cobraDefaultString(env string,defaultValue string) string {
@@ -199,5 +205,6 @@ func cobraInitCommands() {
 	statusCmd.AddCommand(statusRodrevCmd)
 	rootCmd.AddCommand(statusCmd)
 	fenceCmd.AddCommand(fenceRunCmd)
+	fenceCmd.AddCommand(fenceStatusCmd)
 	rootCmd.AddCommand(fenceCmd)
 }

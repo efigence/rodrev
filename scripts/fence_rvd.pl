@@ -9,11 +9,15 @@ use Carp qw(croak cluck carp confess);
 use Getopt::Long qw(:config auto_help);
 use Pod::Usage;
 use Data::Dumper;
+use Sys::Syslog;
+use Switch;
 
+openlog('fence_rvd', 'ndelay', 'daemon');
+syslog($priority, $format, @args);
+
+closelog();
 my $cfg = { # default config values go here
     'rv-path' => '/usr/local/bin/rv',
-#    daemon  => 0,
-#    pidfile => 0,
 };
 my $help;
 
@@ -79,8 +83,31 @@ if ($help || defined( $missing_opts ) ) {
         -verbose => $verbose, #exit code doesnt work with verbose > 2, it changes to 1
     );
 }
+syslog('info', "running [$cfg->{'action'}] on [$cfg->{'nodename'}]");
+syslog('info', Dumper $config);
 
 
+switch(lc($cfg->{'action'})) {
+    case /status|monitor/ {
+        system($cfg->{'rv-path'}, 'fence', 'status', $cfg->{'nodename'});
+        my $exit_code = $? >> 8;
+        exit $exit_code;
+    }
+    case /off|reboot/ {
+        system($cfg->{'rv-path'}, 'fence', 'run', $cfg->{'nodename'});
+        my $exit_code = $? >> 8;
+        exit $exit_code;
+    }
+    case /on/ {
+        # TODO no idea how to verify restart yet
+        exit 0;
+    }
+    else {
+        print "command [$cfg->{'action'}] not supported"
+    }
+}
+
+closelog();
 
 __END__
 
