@@ -12,7 +12,7 @@ const (
 )
 
 
-func Send(r *common.Runtime,node string) error {
+func Send(r *common.Runtime,node string) error{
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		return fmt.Errorf("error getting reply channel: %s", err)
@@ -26,6 +26,9 @@ func Send(r *common.Runtime,node string) error {
 	})
 	cmd.ReplyTo = replyPath
 	err = cmd.Send(r.MQPrefix + "fence/" + node)
+	if err != nil {
+		return fmt.Errorf("error sending fence request: %s", err)
+	}
 	select {
 	case <-time.After(time.Second * 11):
 		return fmt.Errorf("timed out")
@@ -50,6 +53,9 @@ func Status(r *common.Runtime,node string) (ok bool,err error) {
 	})
 	cmd.ReplyTo = replyPath
 	err = cmd.Send(r.MQPrefix + "fence/" + node)
+	if err != nil {
+		return false, fmt.Errorf("error sending status request: %s", err)
+	}
 	select {
 	case <-time.After(time.Second * 11):
 		return false,fmt.Errorf("timed out")
