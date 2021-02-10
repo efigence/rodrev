@@ -27,6 +27,9 @@ cover-cobertura.xml
 cover.json
 report.xml
 .env.sh
+test.*
+test-out/*
+cover.tmp
 
 # Architecture specific extensions/prefixes
 *.[568vq]
