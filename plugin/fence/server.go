@@ -41,6 +41,7 @@ type Fence struct {
 
 
 type FenceCmd struct {
+	Command string
 	Priority int
 	Node string
 }
@@ -77,7 +78,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	if err != nil {
 		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
 	}
-	f.l.Infof("fencing %s", cmd.Node)
+	f.l.Infof("status request from %s",ev.NodeName())
 	initErr, runErr := (&fenceSelf{}).Self(time.Second)
 	if initErr != nil {
 		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
