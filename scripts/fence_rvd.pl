@@ -102,12 +102,47 @@ switch(lc($cfg->{'action'})) {
         # TODO no idea how to verify restart yet
         exit 0;
     }
+    case /metadata/ {
+        metadata();
+        exit 0;
+    }
     else {
         print "command [$cfg->{'action'}] not supported"
     }
 }
 
 closelog();
+
+
+sub metadata() {
+    print '<?xml version="1.0" ?>
+<resource-agent name="fence_rsysrq" shortdesc="Fence agent via rodrev" >
+<longdesc>
+fence_rvd sends fencing request to rodrev via queue
+</longdesc>
+<vendor-url>https://efigence.com</vendor-url>
+<parameters>
+        <parameter name="action" unique="1" required="1">
+                <getopt mixed="--action" />
+                <content type="string" default="reboot" />
+                <shortdesc lang="en">Fencing Action</shortdesc>
+        </parameter>
+        <parameter name="nodename" unique="1" required="1">
+                <getopt mixed="--nodename" />
+                <content type="string"  />
+                <shortdesc lang="en">name (fqdn or certname) of the node</shortdesc>
+        </parameter>
+</parameters>
+<actions>
+    <action name="reboot" />
+    <action name="status" />
+    <action name="monitor" />
+    <action name="metadata" />
+</actions>
+</resource-agent>
+';
+}
+
 
 __END__
 
