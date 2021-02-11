@@ -65,12 +65,13 @@ if ( !defined($ARGV[0])) {
     $parse_stdin = 1;
 }
 
-while(<STDIN>) {
-    chomp;
-    my ($k, $v) = split(/=/, $_, 2);
-    $cfg->{$k} = $v;
+if ($parse_stdin) {
+    while (<STDIN>) {
+        chomp;
+        my ($k, $v) = split(/=/, $_, 2);
+        $cfg->{$k} = $v;
+    }
 }
-
 GetOptions(
     'o|action=s' => \$cfg->{'action'},
     'ipaddr=s' => \$cfg->{'ipaddr'},
