@@ -189,6 +189,14 @@ Pacemaker will passs fencing parameters via STDIN
 
 test if fencing works to given node
 
+=item B<pcs stonith create ipmi-fence-sql1 fence_rvd nodename=-sql1.example.com op monitor interval=600s
+>
+
+add fencing for a given node. Probably want to also constrain it to run fencing on the other node like
+
+B<pcs constraint location ipmi-fence-sql1 avoids sql1>
+
+
 =back
 
 =cut
