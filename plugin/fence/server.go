@@ -103,23 +103,36 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	if !allowed {
 		return fmt.Errorf("node %s is not permitted to fence us", ev.NodeName())
 	}
-	f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
-	initErr, runErr := (&fenceSelf{}).Self(time.Second*6)
-	if initErr != nil {
-		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
-	}
-	err = <- runErr
-	re := f.node.NewEvent()
-	re.Headers["fqdn"] = util.GetFQDN()
-	resp := FenceResponse{}
+	switch cmd.Command {
+	case cmdFence:
+		initErr, runErr := (&fenceSelf{}).Self(time.Second * 6)
+		if initErr != nil {
+			f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
+		}
+		err = <-runErr
+		re := f.node.NewEvent()
+		re.Headers["fqdn"] = util.GetFQDN()
+		resp := FenceResponse{}
 
-	if err != nil {
-		f.l.Errorf("error running fencing [%+v]: %s", cmd, err)
-	} else {
+		if err != nil {
+			f.l.Errorf("error running fencing [%+v]: %s", cmd, err)
+		} else {
+			resp.Success = true
+		}
+		re.Marshal(resp)
+		ev.Reply(re)
+	case	cmdStatus:
+		f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
+		// TODO check fence status
+		resp := FenceResponse{}
 		resp.Success = true
+		re := f.node.NewEvent()
+		re.Headers["fqdn"] = util.GetFQDN()
+		re.Marshal(resp)
+		ev.Reply(re)
+	default:
+
 	}
-	re.Marshal(resp)
-	ev.Reply(re)
 
 	return err
 }
