@@ -9,11 +9,10 @@ use Carp qw(croak cluck carp confess);
 use Getopt::Long qw(:config auto_help);
 use Pod::Usage;
 use Data::Dumper;
-use Sys::Syslog;
 use Sys::Syslog qw(:standard :macros);
 use Switch;
 openlog('fence_rvd', 'ndelay', 'daemon');
-
+syslog(LOG_INFO, "args: " . join(',',@ARGV));
 
 sub metadata() {
     print '<?xml version="1.0" ?>
@@ -86,7 +85,7 @@ GetOptions(
     -exitval => 1,   #exit with error code if there is something wrong with arguments so anything depending on exit code fails too
 );
 
-syslog('info', Dumper $cfg);
+syslog(LOG_INFO, Dumper $cfg);
 
 if ($cfg->{'action'} eq 'metadata') {
     &metadata();
@@ -114,7 +113,7 @@ if ($help || defined( $missing_opts ) ) {
         -verbose => $verbose, #exit code doesnt work with verbose > 2, it changes to 1
     );
 }
-syslog('info', "running [$cfg->{'action'}] on [$cfg->{'nodename'}]");
+syslog(LOG_INFO, "running [$cfg->{'action'}] on [$cfg->{'nodename'}]");
 
 
 switch(lc($cfg->{'action'})) {
