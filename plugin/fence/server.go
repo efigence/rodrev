@@ -64,12 +64,33 @@ func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(), err)
+			p.l.Errorf("Error handling fence event[%s]: %s", ev.NodeName(), err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
 }
 
+func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool, err error) {
+	if (f.cfg.Group == "" && len(f.cfg.NodeMap) == 0) {
+		return true, nil
+	}
+	if f.cfg.Group != "" {
+		if v, ok := ev.Headers["fence-group"]; ok {
+			if v == f.cfg.Group {
+				return true, nil
+			}
+		}
+	}
+	if len(f.cfg.NodeMap) > 0 {
+		allowedTargets := f.cfg.NodeMap[cmd.Node].Nodes
+		for _,n :=  range allowedTargets {
+			if n == util.GetFQDN() {
+				return true, nil
+			}
+		}
+	}
+	return false,nil
+}
 
 func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	var cmd FenceCmd
@@ -78,7 +99,11 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	if err != nil {
 		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
 	}
-	f.l.Infof("status request from %s",ev.NodeName())
+	allowed, err := f.CheckPermissions(ev, &cmd)
+	if !allowed {
+		return fmt.Errorf("node %s is not permitted to fence us", ev.NodeName())
+	}
+	f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
 	initErr, runErr := (&fenceSelf{}).Self(time.Second)
 	if initErr != nil {
 		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)

@@ -11,10 +11,17 @@ import (
 
 
 type FenceConfig struct {
-	Whitelist map[string]string
 	Type      string
-	Enabled   bool               `yaml:"enabled"`
-	Logger    *zap.SugaredLogger `yaml:"-"`
+	Enabled   bool                 `yaml:"enabled"`
+	NodeMap   map[string]FenceNode `yaml:"node_map"`
+	Group     string  `yaml:"group"`
+	GroupPassword string `yaml:"group_password"`
+	Logger    *zap.SugaredLogger   `yaml:"-"`
+}
+
+type FenceNode struct {
+	Nodes []string `yaml:"node"`
+	Password string `yaml:"password"`
 }
 
 type Config struct {

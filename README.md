@@ -56,3 +56,34 @@ There is few added functions and global variables:
 ## UDP server for VM info
 
 Serves hypervisor info on UDP. Designed so VMs can have that mapped via serial port to get their parent info
+
+## Modules
+
+### Fence
+
+default fence method will sysrq the host (sync -> umount -> reboot).
+
+Fence needs to be enabled on server with ACLs on which node is allowed to fence what.
+Either set `node_map` to matrix of nodes, or set `group`
+
+This is NOT for security (checks are weak, password not implemented yet), just to avoid accidents
+
+
+#### Config
+
+```yaml
+---
+fence:
+    enabled: true
+    # maps clients to nodes it is allowed to fence
+    node_map: 
+        rf-client-node1-fence:        
+            nodes:
+                - node1.example.com
+                - node2.example.com
+            password: asdg 
+    # alternatively, define fence group with password,
+    # every node in the group will be allowed to fence eachother
+    group: sql
+    group_password: nasudjb
+```
