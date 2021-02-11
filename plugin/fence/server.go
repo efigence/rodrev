@@ -104,7 +104,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		return fmt.Errorf("node %s is not permitted to fence us", ev.NodeName())
 	}
 	f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
-	initErr, runErr := (&fenceSelf{}).Self(time.Second)
+	initErr, runErr := (&fenceSelf{}).Self(time.Second*6)
 	if initErr != nil {
 		f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
 	}
