@@ -15,15 +15,13 @@ func (f *fenceSelf) Self(delay time.Duration) (initError error, runError chan er
 	runCh := make(chan error, 1)
 	// TODO run sysrq test
 	go func() {
-		if delay > 0 {
-			runCh <- sysrq.Trigger(sysrq.CmdSync)
-			time.Sleep(delay)
-			runCh <- sysrq.Trigger(sysrq.CmdReadonly)
-			time.Sleep(time.Second * 10)
-			sysrq.Trigger(sysrq.CmdSync)
-			time.Sleep(time.Second * 10)
-			sysrq.Trigger(sysrq.CmdReboot)
-		}
+		sysrq.Trigger(sysrq.CmdSync)
+		time.Sleep(delay)
+		runCh <- sysrq.Trigger(sysrq.CmdReadonly)
+		time.Sleep(time.Second * 10)
+		sysrq.Trigger(sysrq.CmdSync)
+		time.Sleep(time.Second * 10)
+		sysrq.Trigger(sysrq.CmdReboot)
 	}()
 	return nil, runCh
 }

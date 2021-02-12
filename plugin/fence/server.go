@@ -95,7 +95,6 @@ func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool
 func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	var cmd FenceCmd
 	err := ev.Unmarshal(&cmd)
-	f.l.Debugf("got fence request from %s",ev.NodeName())
 	if err != nil {
 		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
 	}
@@ -105,6 +104,8 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	}
 	switch cmd.Command {
 	case cmdFence:
+		f.l.Debugf("got fence request from %s",ev.NodeName())
+
 		initErr, runErr := (&fenceSelf{}).Self(time.Second * 6)
 		if initErr != nil {
 			f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
@@ -121,7 +122,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		}
 		re.Marshal(resp)
 		ev.Reply(re)
-	case	cmdStatus:
+	case cmdStatus:
 		f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
 		// TODO check fence status
 		resp := FenceResponse{}
@@ -131,6 +132,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		re.Marshal(resp)
 		ev.Reply(re)
 	default:
+		f.l.Warnf("got unknown command [%s] from %s",cmd.Command, ev.NodeName())
 
 	}
 
