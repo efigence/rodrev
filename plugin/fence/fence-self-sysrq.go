@@ -18,9 +18,8 @@ func (f *fenceSelf) Self(delay time.Duration) (initError error, runError chan er
 		sysrq.Trigger(sysrq.CmdSync)
 		time.Sleep(delay)
 		runCh <- sysrq.Trigger(sysrq.CmdReadonly)
-		time.Sleep(time.Second * 10)
 		sysrq.Trigger(sysrq.CmdSync)
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 20)
 		sysrq.Trigger(sysrq.CmdReboot)
 	}()
 	return nil, runCh
