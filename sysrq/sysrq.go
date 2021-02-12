@@ -26,7 +26,7 @@ var sysrqState = 0
 
 
 const (
-	CmdReadonly = 'r'
+	CmdReadonly = 'u'
 	CmdOff = 'o'
 	CmdSync = 's'
 	CmdTerm = 'e'
