@@ -46,8 +46,6 @@ func updateSysrqState() error {
 
 
 func Trigger (cmd rune)  error {
-	// safeguard for test period
-	cmd = 's'
 	sysrq, err := os.OpenFile(sysrqPath, os.O_WRONLY|os.O_SYNC, 0200)
 	if err != nil {
 		return fmt.Errorf("error opening sysrq: %s", err)
