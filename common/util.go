@@ -33,7 +33,6 @@ func MergeCliConfig(cfg *config.Config, cmd *cobra.Command) {
 
 	if len(StringOrPanic(c.GetString("mqtt-url"))) > 0 {
 		cfg.MQAddress = StringOrPanic(c.GetString("mqtt-url"))
-		fmt.Printf("%s\n",cfg.MQAddress)
 	}
 
 	if len(cfg.MQAddress) == 0 {

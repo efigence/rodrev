@@ -53,7 +53,6 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	var cfg config.Config
 	cfg.Logger = log
 	err = yamlcfg.LoadConfig(cfgFiles, &cfg)
-	fmt.Printf("%+v\n",cfg)
 
 	if err != nil {
 		url, err:=c.GetString("mqtt-url")
