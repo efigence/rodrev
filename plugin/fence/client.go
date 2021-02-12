@@ -28,13 +28,15 @@ func Send(r *common.Runtime,node string) error{
 		Node:     node,
 	})
 	cmd.ReplyTo = replyPath
+	cmd.Prepare()
 	err = cmd.Send(r.MQPrefix + "fence/" + node)
 	if err != nil {
 		return fmt.Errorf("error sending fence request: %s", err)
 	}
 	select {
-	case <-time.After(time.Second * 11):
+	case <-time.After(time.Second * 21): // change server timer too
 		return fmt.Errorf("timed out")
+
 	case ev := <- replyCh:
 		// TODO error handling
 		r.Log.Infof("got fence answer: %s",string(ev.Body))
