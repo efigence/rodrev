@@ -19,6 +19,9 @@ func Send(r *common.Runtime,node string) error{
 	}
 	defer close(replyCh)
 	cmd := r.Node.NewEvent()
+	if len(r.Cfg.Fence.Group) > 0 {
+		cmd.Headers["fence-group"] = r.Cfg.Fence.Group
+	}
 	cmd.Marshal(FenceCmd{
 		Command: cmdFence,
 		Priority: 0,
