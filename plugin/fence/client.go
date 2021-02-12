@@ -47,7 +47,6 @@ func Status(r *common.Runtime,node string) (ok bool,err error) {
 	defer close(replyCh)
 	cmd := r.Node.NewEvent()
 	if len(r.Cfg.Fence.Group) > 0 {
-		fmt.Printf("\n\nGENCE\n\n")
 		cmd.Headers["fence-group"] = r.Cfg.Fence.Group
 	}
 	cmd.Marshal(FenceCmd{

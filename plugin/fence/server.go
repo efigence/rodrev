@@ -101,7 +101,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	}
 	allowed, err := f.CheckPermissions(ev, &cmd)
 	if !allowed {
-		return fmt.Errorf("node %s is not permitted to fence us", ev.NodeName())
+		return fmt.Errorf("node %s is not permitted to fence us [group:%s]", ev.NodeName(),ev.Headers["fence-group"])
 	}
 	switch cmd.Command {
 	case cmdFence:
