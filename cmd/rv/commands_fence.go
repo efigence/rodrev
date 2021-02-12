@@ -31,10 +31,10 @@ func FenceStatus(cmd *cobra.Command, args []string) {
 	c :=  cmd.Flags()
 	_ =runtime
 	_ = c
-	log.Infof("sending fence to %s from [%s]",args[0],runtime.FQDN)
+	log.Infof("sending status request to %s from [%s]",args[0],runtime.FQDN)
 	ok, err := fence.Status(&runtime,args[0])
 	if err != nil {
-		log.Errorf("fence failed: %s",err)
+		log.Errorf("status request failed: %s",err)
 		os.Exit(1)
 	}
 	if ok {
