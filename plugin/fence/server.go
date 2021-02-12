@@ -106,7 +106,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	case cmdFence:
 		f.l.Debugf("got fence request from %s",ev.NodeName())
 
-		initErr, runErr := (&fenceSelf{}).Self(time.Second * 6)
+		initErr, runErr := (&fenceSelf{}).Self(time.Second * 11)
 		if initErr != nil {
 			f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
 		}
