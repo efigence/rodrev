@@ -93,7 +93,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			// TODO alert/fail somehow
 			d.l.Errorf("starting fencing failed: %s",err)
 		}
-		d.l.Infof("starting fencing")
+		d.l.Infof("starting fencing plugin")
 		go func() {
 			for {
 				ch, err := d.node.GetEventsCh(d.prefix + "fence/" + d.fqdn)
