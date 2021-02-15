@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"go.uber.org/zap"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -45,7 +46,11 @@ func Run(c ConfigServer) {
 			time.Sleep(time.Hour)
 			c.Logger.Panicf("error receiving packet %s: %s, restarting",c.Logger,err)
 		}
-		_, err = conn.WriteToUDP(data, addr)
+		if strings.Contains(string(buf[0:]),"*IDN?") {
+			_, err = conn.WriteToUDP(data, addr)
+		} else {
+			c.Logger.Infof("got unknown data (no command): [%s]", string(buf[:0]))
+		}
 		if err != nil {c.Logger.Warnf("error when sending packet to %s: %s", addr.String(), err)}
     }
 
