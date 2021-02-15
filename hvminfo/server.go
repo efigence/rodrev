@@ -46,7 +46,8 @@ func Run(c ConfigServer) {
 			time.Sleep(time.Hour)
 			c.Logger.Panicf("error receiving packet %s: %s, restarting",c.Logger,err)
 		}
-		if strings.Contains(string(buf[0:]),"*IDN?") {
+		if strings.Contains(string(buf[0:]),"I") {
+			c.Logger.Infof("got [%s], sending reply info")
 			_, err = conn.WriteToUDP(data, addr)
 		} else {
 			c.Logger.Infof("got unknown data (no command): [%s]", string(buf[:0]))
