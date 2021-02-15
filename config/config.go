@@ -30,6 +30,7 @@ type Config struct {
 	CA         string                 `yaml:"ca_certs,omitempty"`
 	ClientCert string                 `yaml:"client_cert,omitempty"`
 	NodeMeta   map[string]interface{} `yaml:"node_meta,omitempty"`
+	HVMInfoClient   *hvminfo.ConfigClient `yaml:"hvm_info_client,omitempty"`
 	HVMInfoServer   *hvminfo.ConfigServer `yaml:"hvm_info_server,omitempty"`
 	Fence      FenceConfig            `yaml:"fence"`
 	Logger     *zap.SugaredLogger     `yaml:"-"`

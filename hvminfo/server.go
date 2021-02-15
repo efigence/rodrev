@@ -14,7 +14,7 @@ type ConfigServer struct {
 	Logger *zap.SugaredLogger `yaml:"-"`
 }
 
-func Run(c ConfigServer) {
+func RunServer(c ConfigServer) {
     udpAddr, err := net.ResolveUDPAddr("udp", c.Listen)
     if err != nil {
     	c.Logger.Errorf("error resolving address %s: %s, will restart in hour to check whether problem is fixed",c.Logger,err)

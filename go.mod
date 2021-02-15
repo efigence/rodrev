@@ -13,6 +13,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pkg/term v1.1.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/shurcooL/go v0.0.0-20191216061654-b114cc39af9f // indirect
 	github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041 // indirect
