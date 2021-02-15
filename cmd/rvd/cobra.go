@@ -79,7 +79,14 @@ var rootCmd = &cobra.Command{
 			serverCfg := *cfg.HVMInfoServer
 			serverCfg.Info = hvminfo.HVMInfo{}.Default()
 			serverCfg.Logger = log
-			go hvminfo.Run(serverCfg)
+			go hvminfo.RunServer(serverCfg)
+		}
+		if cfg.HVMInfoClient != nil {
+			cfg.HVMInfoClient.Logger = log
+			err := hvminfo.RunClient(cfg.HVMInfoClient)
+			if err != nil {
+				log.Warnf("error running serial client:", err)
+			}
 		}
 		d, err := daemon.New(cfg)
 
