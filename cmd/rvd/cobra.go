@@ -83,6 +83,7 @@ var rootCmd = &cobra.Command{
 		}
 		if cfg.HVMInfoClient != nil {
 			cfg.HVMInfoClient.Logger = log
+			cfg.HVMInfoClient.Version = version
 			err := hvminfo.RunClient(cfg.HVMInfoClient)
 			if err != nil {
 				log.Warnf("error running serial client:", err)

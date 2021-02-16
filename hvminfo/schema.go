@@ -13,6 +13,7 @@ type HVMInfo struct {
 
 type Facts struct {
 	VmHost string `yaml:"vm_host"`
+	RodrevVersion string `yaml:"rodrev_version"`
 }
 
 
