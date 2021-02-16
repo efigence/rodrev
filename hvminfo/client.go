@@ -2,15 +2,20 @@ package hvminfo
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/term"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"os"
 	"time"
 )
 
 type ConfigClient struct {
 	Port string `yaml:"port"`
 	Speed int `yaml:"baudrate"`
+	PuppetFactPath string `yaml:"puppet_fact_path"`
 	Logger *zap.SugaredLogger `yaml:"-"`
 }
 
@@ -33,8 +38,29 @@ func RunClient (cfg *ConfigClient) error{
 			}
 		} ()
 		for scanner.Scan() {
-			line := scanner.Text()
-			cfg.Logger.Infof("got [%s] on serial\n",line)
+			line := scanner.Bytes()
+			var i HVMInfo
+			err := json.Unmarshal(line,&i)
+			if err != nil {
+				cfg.Logger.Infof("error unmarshalling [%s] \n", line)
+				continue
+			}
+			if len(cfg.PuppetFactPath) > 0 {
+				if len(i.FQDN) > 0 {
+					var f Facts
+					f.VmHost = i.FQDN
+					data, err := yaml.Marshal(f)
+					if err != nil {
+						cfg.Logger.Errorf("error marshalling data: %s", err)
+					}
+					err = ioutil.WriteFile(cfg.PuppetFactPath + ".tmp", data,0644)
+					if err != nil {
+						cfg.Logger.Errorf("error writing tmpfile: %s", err)
+					}
+					err = os.Rename(cfg.PuppetFactPath + ".tmp",cfg.PuppetFactPath)
+					cfg.Logger.Errorf("error renaming tmpfile: %s", err)
+				}
+			}
 		}
 		cfg.Logger.Infof("serial reader exited\n")
 	}()

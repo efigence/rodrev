@@ -11,6 +11,11 @@ type HVMInfo struct {
 	FQDN string `json:"fqdn"`
 }
 
+type Facts struct {
+	VmHost string `yaml:"vm_host"`
+}
+
+
 func(h HVMInfo) Default() HVMInfo {
 	if h.FQDN == "" {
 		h.FQDN = zerosvc.GetFQDN()
