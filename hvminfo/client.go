@@ -17,6 +17,7 @@ type ConfigClient struct {
 	Speed int `yaml:"baudrate"`
 	PuppetFactPath string `yaml:"puppet_fact_path"`
 	Logger *zap.SugaredLogger `yaml:"-"`
+	Version string `yaml:"-"`
 }
 
 
@@ -49,6 +50,7 @@ func RunClient (cfg *ConfigClient) error{
 				if len(i.FQDN) > 0 {
 					var f Facts
 					f.VmHost = i.FQDN
+					f.RodrevVersion = cfg.Version
 					data, err := yaml.Marshal(f)
 					if err != nil {
 						cfg.Logger.Errorf("error marshalling data: %s", err)
@@ -58,7 +60,9 @@ func RunClient (cfg *ConfigClient) error{
 						cfg.Logger.Errorf("error writing tmpfile: %s", err)
 					}
 					err = os.Rename(cfg.PuppetFactPath + ".tmp",cfg.PuppetFactPath)
-					cfg.Logger.Errorf("error renaming tmpfile: %s", err)
+					if err != nil {
+						cfg.Logger.Errorf("error renaming tmpfile: %s", err)
+					}
 				}
 			}
 		}
