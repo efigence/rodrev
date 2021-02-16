@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/term"
 	"go.uber.org/zap"
+	"time"
 )
 
 type ConfigClient struct {
@@ -22,6 +23,15 @@ func RunClient (cfg *ConfigClient) error{
 	if err != nil {return fmt.Errorf("error opening %s: %s",cfg.Port,err)}
 	go func() {
 		scanner := bufio.NewScanner(t)
+		go func() {
+			for {
+				_, err := t.Write([]byte(CmdInfo))
+				if err != nil {
+					cfg.Logger.Errorf("error writing command to %s", cfg.Port)
+				}
+				time.Sleep(time.Second * 60)
+			}
+		} ()
 		for scanner.Scan() {
 			line := scanner.Text()
 			cfg.Logger.Infof("got [%s] on serial\n",line)
