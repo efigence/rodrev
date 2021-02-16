@@ -35,7 +35,7 @@ func RunClient (cfg *ConfigClient) error{
 				if err != nil {
 					cfg.Logger.Errorf("error writing command to %s", cfg.Port)
 				}
-				time.Sleep(time.Second * 60)
+				time.Sleep(time.Minute * 5)
 			}
 		} ()
 		for scanner.Scan() {
