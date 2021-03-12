@@ -119,12 +119,12 @@ syslog(LOG_INFO, "running [$cfg->{'action'}] on [$cfg->{'nodename'}]");
 
 switch(lc($cfg->{'action'})) {
     case /status|monitor/ {
-        system($cfg->{'rv-path'}, 'fence', 'status', $cfg->{'nodename'});
+        system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf','fence', 'status', $cfg->{'nodename'});
         my $exit_code = $? >> 8;
         exit $exit_code;
     }
     case /off|reboot/ {
-        system($cfg->{'rv-path'}, 'fence', 'run', $cfg->{'nodename'});
+        system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf', 'fence', 'run', $cfg->{'nodename'});
         my $exit_code = $? >> 8;
         exit $exit_code;
     }
