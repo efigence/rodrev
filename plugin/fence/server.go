@@ -11,14 +11,12 @@ import (
 )
 
 const (
-	FenceLocalSysrq = "local_sysrq"
+	FenceLocalSysrq    = "local_sysrq"
 	FenceRemoteLibvirt = "remote_libvirt"
 )
 
-
-
-var DefaultConfig = config.FenceConfig {
-   Type: FenceLocalSysrq,
+var DefaultConfig = config.FenceConfig{
+	Type: FenceLocalSysrq,
 }
 
 type FenceModule interface {
@@ -29,36 +27,33 @@ type FenceModule interface {
 	// run error should return `nil` after delay or error if the fencing failed
 	Self(delay time.Duration) (initError error, runError chan error)
 	// same as Self but targets different node
-	Node(nodeName string, delay time.Duration)  (initError error, runError chan error)
+	Node(nodeName string, delay time.Duration) (initError error, runError chan error)
 }
 
 type Fence struct {
-	cfg *config.FenceConfig
+	cfg         *config.FenceConfig
 	fenceModule FenceModule
-	l *zap.SugaredLogger
-	node *zerosvc.Node
+	l           *zap.SugaredLogger
+	node        *zerosvc.Node
 }
 
-
 type FenceCmd struct {
-	Command string
+	Command  string
 	Priority int
-	Node string
+	Node     string
 }
 type FenceResponse struct {
 	Priority int
-	Success bool
+	Success  bool
 }
 
-
-func New(runtime *common.Runtime,cfg config.FenceConfig) (*Fence, error) {
+func New(runtime *common.Runtime, cfg config.FenceConfig) (*Fence, error) {
 	var f Fence
 	f.cfg = &cfg
-	f.l  = cfg.Logger
+	f.l = cfg.Logger
 	f.node = runtime.Node
 	return &f, nil
 }
-
 
 func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
@@ -71,7 +66,7 @@ func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
 }
 
 func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool, err error) {
-	if (f.cfg.Group == "" && len(f.cfg.NodeMap) == 0) {
+	if f.cfg.Group == "" && len(f.cfg.NodeMap) == 0 {
 		return true, nil
 	}
 	if f.cfg.Group != "" {
@@ -83,13 +78,13 @@ func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool
 	}
 	if len(f.cfg.NodeMap) > 0 {
 		allowedTargets := f.cfg.NodeMap[cmd.Node].Nodes
-		for _,n :=  range allowedTargets {
+		for _, n := range allowedTargets {
 			if n == util.GetFQDN() {
 				return true, nil
 			}
 		}
 	}
-	return false,nil
+	return false, nil
 }
 
 func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
@@ -100,11 +95,11 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	}
 	allowed, err := f.CheckPermissions(ev, &cmd)
 	if !allowed {
-		return fmt.Errorf("node %s is not permitted to fence us [group:%s]", ev.NodeName(),ev.Headers["fence-group"])
+		return fmt.Errorf("node %s is not permitted to fence us [group:%s]", ev.NodeName(), ev.Headers["fence-group"])
 	}
 	switch cmd.Command {
 	case cmdFence:
-		f.l.Debugf("got fence request from %s",ev.NodeName())
+		f.l.Debugf("got fence request from %s", ev.NodeName())
 
 		initErr, runErr := (&fenceSelf{}).Self(time.Second * 11)
 		if initErr != nil {
@@ -123,7 +118,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		re.Marshal(resp)
 		ev.Reply(re)
 	case cmdStatus:
-		f.l.Infof("status request from %s[%s]",ev.NodeName(),ev.Headers["fqdn"])
+		f.l.Infof("status request from %s[%+v]", ev.NodeName(), ev.Headers)
 		// TODO check fence status
 		resp := FenceResponse{}
 		resp.Success = true
@@ -132,7 +127,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 		re.Marshal(resp)
 		ev.Reply(re)
 	default:
-		f.l.Warnf("got unknown command [%s] from %s",cmd.Command, ev.NodeName())
+		f.l.Warnf("got unknown command [%s] from %s", cmd.Command, ev.NodeName())
 
 	}
 
