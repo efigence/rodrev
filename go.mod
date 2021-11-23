@@ -21,7 +21,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/ugorji/go v1.1.7 // indirect
-	github.com/zerosvc/go-zerosvc v0.1.2
+	github.com/zerosvc/go-zerosvc v0.1.4
 	go.uber.org/zap v1.14.1
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
