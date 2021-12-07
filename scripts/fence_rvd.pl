@@ -121,11 +121,23 @@ switch(lc($cfg->{'action'})) {
     case /status|monitor/ {
         system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf','fence', 'status', $cfg->{'nodename'});
         my $exit_code = $? >> 8;
+        if ($exit_code != 0) {
+            print "rvd failed, retrying\n";
+            sleep 4;
+            system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf','fence', 'status', $cfg->{'nodename'});
+            $exit_code = $? >> 8;
+        }
         exit $exit_code;
     }
     case /off|reboot/ {
         system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf', 'fence', 'run', $cfg->{'nodename'});
         my $exit_code = $? >> 8;
+        if ($exit_code != 0) {
+            print "rvd failed, retrying\n";
+            sleep 4;
+            system($cfg->{'rv-path'},'--config','/etc/rodrev/client-fence.conf', 'fence', 'run', $cfg->{'nodename'});
+            $exit_code = $? >> 8;
+        }
         exit $exit_code;
     }
     case /on/ {
