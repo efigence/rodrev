@@ -7,19 +7,20 @@ import (
 	"os"
 	"time"
 )
+
 // Root
 var rootCmd = &cobra.Command{
-	Use: "rv",
+	Use:   "rv",
 	Short: "rodrev client",
-	Long: "rodrev client/cli",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Long:  "rodrev client/cli",
+	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(1)
 	},
 }
 
 var versionCmd = &cobra.Command{
-	Use: "version",
+	Use:   "version",
 	Short: "show version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(version)
@@ -27,22 +28,21 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-
 // Puppet
 var puppetCmd = &cobra.Command{
-	Use: "puppet",
+	Use:   "puppet",
 	Short: "puppet management (run/status/etc)",
-//	Args: cobra.MinimumNArgs(1),
-	Run:  func(cmd *cobra.Command, args []string) {
+	//	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(1)
 	},
 }
 
 var puppetRunCmd = &cobra.Command{
-	Use: "run",
+	Use:   "run",
 	Short: "run puppet on one or more machines. Needs --target. Specify --target all to run on all discovered ones",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		cfg, runtime := Init(cmd)
 		c := cmd.Flags()
 		_ = cfg
@@ -50,7 +50,7 @@ var puppetRunCmd = &cobra.Command{
 		if len(target) == 0 {
 			target = stringOrPanic(c.GetString("target"))
 		}
-		randomDelay :=  durationOrPanic(c.GetDuration("random-delay"))
+		randomDelay := durationOrPanic(c.GetDuration("random-delay"))
 		if len(target) == 0 {
 			log.Warn("need --target parameter")
 			os.Exit(1)
@@ -73,35 +73,35 @@ var puppetRunCmd = &cobra.Command{
 }
 
 var puppetStatusCmd = &cobra.Command{
-	Use: "status",
+	Use:   "status",
 	Short: "display status of last puppet run",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		StatusPuppet(cmd)
 	},
 }
 
 // Status
 var statusCmd = &cobra.Command{
-	Use: "status",
+	Use:   "status",
 	Short: "get status",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
 }
 
 var statusPuppetCmd = &cobra.Command{
-	Use: "puppet",
+	Use:   "puppet",
 	Short: "Puppet Status",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		StatusPuppet(cmd)
 
 	},
 }
 
 var statusRodrevCmd = &cobra.Command{
-	Use: "rodrev",
+	Use:   "rodrev",
 	Short: "Rodrev status",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		StatusRodrev(cmd)
 	},
 }
@@ -109,11 +109,10 @@ var statusRodrevCmd = &cobra.Command{
 var fenceCmd = &cobra.Command{
 	Use:   "fence",
 	Short: "fencing commands",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
 }
-
 
 var fenceRunCmd = &cobra.Command{
 	Use:   "run <node>",
@@ -127,7 +126,7 @@ var fenceStatusCmd = &cobra.Command{
 	Run:   FenceStatus,
 }
 
-func cobraDefaultString(env string,defaultValue string) string {
+func cobraDefaultString(env string, defaultValue string) string {
 	e := os.Getenv(env)
 	if e == "" {
 		return defaultValue

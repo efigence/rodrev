@@ -7,29 +7,30 @@ import (
 	"net/url"
 	"time"
 )
-func StringOrPanic (s string,err error) string {
+
+func StringOrPanic(s string, err error) string {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return s
 }
 
-func BoolOrPanic (b bool,err error) bool {
+func BoolOrPanic(b bool, err error) bool {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return b
 }
-func DurationOrPanic (d time.Duration,err error) time.Duration {
+func DurationOrPanic(d time.Duration, err error) time.Duration {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return d
 }
+
 // MergeCliConfig merges(overrides mostly) cli and file config values
 func MergeCliConfig(cfg *config.Config, cmd *cobra.Command) {
 	c := cmd.Flags()
-
 
 	if len(StringOrPanic(c.GetString("mqtt-url"))) > 0 {
 		cfg.MQAddress = StringOrPanic(c.GetString("mqtt-url"))

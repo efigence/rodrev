@@ -16,22 +16,22 @@ import (
 	"github.com/zerosvc/go-zerosvc"
 )
 
-func stringOrPanic (s string,err error) string {
+func stringOrPanic(s string, err error) string {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return s
 }
 
-func boolOrPanic (b bool,err error) bool {
+func boolOrPanic(b bool, err error) bool {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return b
 }
-func durationOrPanic (d time.Duration,err error) time.Duration {
+func durationOrPanic(d time.Duration, err error) time.Duration {
 	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s",err))
+		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return d
 }
@@ -55,7 +55,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	err = yamlcfg.LoadConfig(cfgFiles, &cfg)
 
 	if err != nil {
-		url, err:=c.GetString("mqtt-url")
+		url, err := c.GetString("mqtt-url")
 		if url == "" || err != nil {
 			log.Errorf("error loading config and no cmdline mq url: ", err)
 		}
@@ -83,13 +83,13 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	node.SetTransport(tr)
 
 	runtime := common.Runtime{
-		Node:     node,
+		Node: node,
 		// TODO load from cert if possible
-		FQDN: util.GetFQDN(),
+		FQDN:     util.GetFQDN(),
 		MQPrefix: cfg.MQPrefix,
 		Log:      log,
 		Debug:    debug,
-		Cfg: cfg,
+		Cfg:      cfg,
 	}
 	outputMode := stringOrPanic(c.GetString("output-format"))
 	outputModeRe := regexp.MustCompile(

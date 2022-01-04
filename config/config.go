@@ -9,34 +9,33 @@ import (
 	"strings"
 )
 
-
 type FenceConfig struct {
-	Type      string
-	Enabled   bool                 `yaml:"enabled"`
-	NodeMap   map[string]FenceNode `yaml:"node_map"`
-	Group     string  `yaml:"group"`
-	GroupPassword string `yaml:"group_password"`
-	Logger    *zap.SugaredLogger   `yaml:"-"`
+	Type          string
+	Enabled       bool                 `yaml:"enabled"`
+	NodeMap       map[string]FenceNode `yaml:"node_map"`
+	Group         string               `yaml:"group"`
+	GroupPassword string               `yaml:"group_password"`
+	Logger        *zap.SugaredLogger   `yaml:"-"`
 }
 
 type FenceNode struct {
-	Nodes []string `yaml:"node"`
-	Password string `yaml:"password"`
+	Nodes    []string `yaml:"node"`
+	Password string   `yaml:"password"`
 }
 
 type Config struct {
-	MQPrefix   string                 `yaml:"mq_prefix,omitempty"`
-	MQAddress  string                 `yaml:"mq_address,omitempty"`
-	CA         string                 `yaml:"ca_certs,omitempty"`
-	ClientCert string                 `yaml:"client_cert,omitempty"`
-	NodeMeta   map[string]interface{} `yaml:"node_meta,omitempty"`
-	HVMInfoClient   *hvminfo.ConfigClient `yaml:"hvm_info_client,omitempty"`
-	HVMInfoServer   *hvminfo.ConfigServer `yaml:"hvm_info_server,omitempty"`
-	Fence      FenceConfig            `yaml:"fence"`
-	Logger     *zap.SugaredLogger     `yaml:"-"`
-	Version    string                 `yaml:"-"`
-	Debug      bool                   `yaml:"debug,omitempty"`
-	configPath string
+	MQPrefix      string                 `yaml:"mq_prefix,omitempty"`
+	MQAddress     string                 `yaml:"mq_address,omitempty"`
+	CA            string                 `yaml:"ca_certs,omitempty"`
+	ClientCert    string                 `yaml:"client_cert,omitempty"`
+	NodeMeta      map[string]interface{} `yaml:"node_meta,omitempty"`
+	HVMInfoClient *hvminfo.ConfigClient  `yaml:"hvm_info_client,omitempty"`
+	HVMInfoServer *hvminfo.ConfigServer  `yaml:"hvm_info_server,omitempty"`
+	Fence         FenceConfig            `yaml:"fence"`
+	Logger        *zap.SugaredLogger     `yaml:"-"`
+	Version       string                 `yaml:"-"`
+	Debug         bool                   `yaml:"debug,omitempty"`
+	configPath    string
 }
 
 func (c *Config) GetDefaultConfig() string {

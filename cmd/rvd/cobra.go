@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/XANi/go-yamlcfg"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
@@ -10,17 +11,16 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"os"
-	"fmt"
 	"os/signal"
 	"syscall"
 	"time"
 )
 
 var rootCmd = &cobra.Command{
-	Use: "rv",
+	Use:   "rv",
 	Short: "rodrev client",
-	Long: "rodrev client/cli",
-	Run:  func(cmd *cobra.Command, args []string) {
+	Long:  "rodrev client/cli",
+	Run: func(cmd *cobra.Command, args []string) {
 		c := cmd.Flags()
 		if len(common.StringOrPanic(c.GetString("profile-addr"))) > 0 {
 			go func() {
@@ -44,7 +44,7 @@ var rootCmd = &cobra.Command{
 		var cfg config.Config
 		err = yamlcfg.LoadConfig(cfgFiles, &cfg)
 		if err != nil {
-			log.Errorf("error loading config: %s",err)
+			log.Errorf("error loading config: %s", err)
 		} else {
 			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
@@ -70,7 +70,7 @@ var rootCmd = &cobra.Command{
 			}
 		}()
 
-		log.Infof("Starting rodrev version: %s",  version)
+		log.Infof("Starting rodrev version: %s", version)
 		log.Infof("FQDN: %s", util.GetFQDN())
 		if debug {
 			cfg.Debug = debug
@@ -97,9 +97,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		_ = d
-},}
+	}}
 var versionCmd = &cobra.Command{
-	Use: "version",
+	Use:   "version",
 	Short: "show version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(version)
@@ -111,7 +111,7 @@ func cobraInit() {
 	cobraInitFlags()
 	cobraInitCommands()
 }
-func cobraDefaultString(env string,defaultValue string) string {
+func cobraDefaultString(env string, defaultValue string) string {
 	e := os.Getenv(env)
 	if e == "" {
 		return defaultValue
@@ -144,8 +144,6 @@ func cobraInitFlags() {
 	)
 }
 
-
 func cobraInitCommands() {
 	rootCmd.AddCommand(versionCmd)
 }
-
