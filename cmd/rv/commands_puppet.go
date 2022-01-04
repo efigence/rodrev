@@ -10,12 +10,11 @@ import (
 	"time"
 )
 
-
 func StatusPuppet(cmd *cobra.Command) error {
 	cfg, runtime := Init(cmd)
 	c := cmd.Flags()
 	_ = cfg
-	status := client.PuppetStatus(&runtime, stringOrPanic(c.GetString("filter") ))
+	status := client.PuppetStatus(&runtime, stringOrPanic(c.GetString("filter")))
 
 	switch stringOrPanic(c.GetString("output-format")) {
 	case outStderr:
@@ -63,5 +62,3 @@ func StatusPuppet(cmd *cobra.Command) error {
 	}
 	return nil
 }
-
-

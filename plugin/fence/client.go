@@ -35,7 +35,6 @@ func Send(r *common.Runtime, node string) error {
 	select {
 	case <-time.After(time.Second * 21): // change server timer too
 		return fmt.Errorf("timed out")
-		//FIXME add better timeout from fencer
 	case ev := <-replyCh:
 		// TODO error handling
 		r.Log.Infof("got fence answer: %s", string(ev.Body))
@@ -60,18 +59,13 @@ func Status(r *common.Runtime, node string) (ok bool, err error) {
 	})
 	cmd.ReplyTo = replyPath
 	cmd.Prepare()
-	errCh := make(chan error, 1)
-	go func() {
-		err = cmd.Send(r.MQPrefix + "fence/" + node)
-		if err != nil {
-			errCh <- err
-		}
-	}()
+	err = cmd.Send(r.MQPrefix + "fence/" + node)
+	if err != nil {
+		return false, fmt.Errorf("error sending status request: %s", err)
+	}
 	select {
 	case <-time.After(time.Second * 11):
 		return false, fmt.Errorf("timed out")
-	case err = <-errCh:
-		return false, err
 	case ev := <-replyCh:
 		_ = ev
 		// TODO error handling

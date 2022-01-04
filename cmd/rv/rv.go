@@ -67,9 +67,11 @@ func InitLog() {
 
 func main() {
 	cobraInit()
-	err :=rootCmd.Execute()
+	err := rootCmd.Execute()
 	if err != nil {
-		if debug {log.Errorf("error parsing commands: %s", err)}
+		if debug {
+			log.Errorf("error parsing commands: %s", err)
+		}
 		os.Exit(1)
 	}
 

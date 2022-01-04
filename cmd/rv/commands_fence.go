@@ -13,12 +13,14 @@ func FenceRun(cmd *cobra.Command, args []string) {
 	}
 	cfg, runtime := Init(cmd)
 	_ = cfg
-	c :=  cmd.Flags()
-	_ =runtime
+	c := cmd.Flags()
+	_ = runtime
 	_ = c
-	log.Infof("sending fence to %s from [%s]",args[0],runtime.FQDN)
-	err := fence.Send(&runtime,args[0])
-	if err != nil {log.Errorf("fence failed: %s",err)}
+	log.Infof("sending fence to %s from [%s]", args[0], runtime.FQDN)
+	err := fence.Send(&runtime, args[0])
+	if err != nil {
+		log.Errorf("fence failed: %s", err)
+	}
 }
 
 func FenceStatus(cmd *cobra.Command, args []string) {
@@ -28,13 +30,13 @@ func FenceStatus(cmd *cobra.Command, args []string) {
 	}
 	cfg, runtime := Init(cmd)
 	_ = cfg
-	c :=  cmd.Flags()
-	_ =runtime
+	c := cmd.Flags()
+	_ = runtime
 	_ = c
-	log.Infof("sending status request to %s from [%s]",args[0],runtime.FQDN)
-	ok, err := fence.Status(&runtime,args[0])
+	log.Infof("sending status request to %s from [%s]", args[0], runtime.FQDN)
+	ok, err := fence.Status(&runtime, args[0])
 	if err != nil {
-		log.Errorf("status request failed: %s",err)
+		log.Errorf("status request failed: %s", err)
 		os.Exit(1)
 	}
 	if ok {

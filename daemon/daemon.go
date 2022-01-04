@@ -87,11 +87,11 @@ func New(cfg config.Config) (*Daemon, error) {
 	}()
 	if cfg.Fence.Enabled {
 		cfg.Fence.Logger = d.l
-		f, err := fence.New(runtime,cfg.Fence)
-		_ =f
+		f, err := fence.New(runtime, cfg.Fence)
+		_ = f
 		if err != nil {
 			// TODO alert/fail somehow
-			d.l.Errorf("starting fencing failed: %s",err)
+			d.l.Errorf("starting fencing failed: %s", err)
 		}
 		d.l.Infof("starting fencing plugin")
 		go func() {
