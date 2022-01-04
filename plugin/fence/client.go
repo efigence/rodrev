@@ -35,7 +35,7 @@ func Send(r *common.Runtime, node string) error {
 	select {
 	case <-time.After(time.Second * 21): // change server timer too
 		return fmt.Errorf("timed out")
-
+		//FIXME add better timeout from fencer
 	case ev := <-replyCh:
 		// TODO error handling
 		r.Log.Infof("got fence answer: %s", string(ev.Body))

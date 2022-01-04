@@ -1,6 +1,6 @@
 module github.com/efigence/rodrev
 
-go 1.11
+go 1.16
 
 require (
 	github.com/XANi/go-yamlcfg v0.2.0
