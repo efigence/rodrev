@@ -51,13 +51,7 @@ func (p *Puppet) run(opt RunOptions) {
 	}
 	if opt.Delay > 0 {
 		if opt.RandomizeDelay {
-			// blunt the edge of normal distribution
-			tth := p.rng.Int63n(opt.Delay.Nanoseconds() / 4)
-			rnd := p.rng.Int63n(opt.Delay.Nanoseconds())
-			if tth > rnd {
-				rnd = tth
-			}
-			opt.Delay = time.Duration(tth)
+			opt.Delay = time.Duration(p.rng.Int63n(opt.Delay.Nanoseconds()))
 		}
 		p.l.Infof("sleeping %ds before run", int64(opt.Delay.Seconds()))
 		p.lock.Lock()
