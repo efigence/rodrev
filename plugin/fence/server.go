@@ -59,7 +59,7 @@ func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling fence event[%s]: %s", ev.NodeName(), err)
+			p.l.Errorf("Error handling fence event[%s:%s]: %s", ev.NodeName(), string(ev.Body), err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
@@ -91,7 +91,7 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	var cmd FenceCmd
 	err := ev.Unmarshal(&cmd)
 	if err != nil {
-		return fmt.Errorf("error unmarshalling event from %s: %s", ev.NodeName(), err)
+		return fmt.Errorf("error unmarshalling event from %s[%s]: %s", ev.NodeName(), string(ev.Body), err)
 	}
 	allowed, err := f.CheckPermissions(ev, &cmd)
 	if !allowed {
