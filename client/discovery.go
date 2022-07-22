@@ -21,7 +21,7 @@ func Discover(r *common.Runtime) (
 	nodesStale = make(map[string]common.Node)
 	ch, err := r.Node.GetEventsCh(r.MQPrefix + "heartbeat/#")
 	if err != nil {
-		log.Panicf("can't connect: %s", err)
+		log.Panicf("can't connect to %s: %s", r.Cfg.MQAddress, err)
 	}
 	// time to wait for event stream to start
 	discoveryTime := time.After(time.Second * 10)
