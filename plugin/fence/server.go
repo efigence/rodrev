@@ -52,6 +52,9 @@ func New(runtime *common.Runtime, cfg config.FenceConfig) (*Fence, error) {
 	f.cfg = &cfg
 	f.l = cfg.Logger
 	f.node = runtime.Node
+	if cfg.Fake {
+		f.l.Errorf("FAKE FENCING ENABLED IN CONFIG! ACTUAL FENCING WILL NOT HAPPEN! THIS WILL EAT YOUR DATA IN PRODUCTION!")
+	}
 	return &f, nil
 }
 
@@ -100,12 +103,16 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	switch cmd.Command {
 	case cmdFence:
 		f.l.Debugf("got fence request from %s", ev.NodeName())
-
-		initErr, runErr := (&fenceSelf{}).Self(time.Second * 11)
-		if initErr != nil {
-			f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
+		if f.cfg.Fake {
+			f.l.Errorf("FAKE FENCING ACKNOWLEDGED, DONT USE ON PROD")
+			err = nil
+		} else {
+			initErr, runErr := (&fenceSelf{}).Self(time.Second * 11)
+			if initErr != nil {
+				f.l.Errorf("error initializing fencing [%+v]: %s", cmd, err)
+			}
+			err = <-runErr
 		}
-		err = <-runErr
 		re := f.node.NewEvent()
 		re.Headers["fqdn"] = util.GetFQDN()
 		resp := FenceResponse{}

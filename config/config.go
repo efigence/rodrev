@@ -15,6 +15,7 @@ type FenceConfig struct {
 	NodeMap       map[string]FenceNode `yaml:"node_map"`
 	Group         string               `yaml:"group"`
 	GroupPassword string               `yaml:"group_password"`
+	Fake          bool                 `yaml:"fake"`
 	Logger        *zap.SugaredLogger   `yaml:"-"`
 }
 
