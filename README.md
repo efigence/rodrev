@@ -21,6 +21,13 @@ node_meta:
 ## optional, will listen to UDP port and serve node info
 hvm_info_server:
     listen: 127.0.0.1:2121
+## optional
+ipset:
+    sets:
+        blocked-net:
+            type: host:net
+            key: lb::blocked_nets
+            rotate-interval: 1d
 ```
 
 
