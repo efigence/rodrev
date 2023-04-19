@@ -7,8 +7,19 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	"strings"
+	"time"
 )
 
+type IPSet struct {
+	Type           string        `yaml:"type"`
+	Key            string        `yaml:"key"`
+	RotateInterval time.Duration `yaml:"rotate_interval"`
+}
+
+type IPSetServer struct {
+	Sets   map[string]IPSet   `yaml:"sets"`
+	Logger *zap.SugaredLogger `yaml:"-"`
+}
 type FenceConfig struct {
 	Type          string
 	Enabled       bool                 `yaml:"enabled"`
@@ -18,12 +29,10 @@ type FenceConfig struct {
 	Fake          bool                 `yaml:"fake"`
 	Logger        *zap.SugaredLogger   `yaml:"-"`
 }
-
 type FenceNode struct {
 	Nodes    []string `yaml:"node"`
 	Password string   `yaml:"password"`
 }
-
 type Config struct {
 	MQPrefix      string                 `yaml:"mq_prefix,omitempty"`
 	MQAddress     string                 `yaml:"mq_address,omitempty"`
@@ -36,6 +45,7 @@ type Config struct {
 	Logger        *zap.SugaredLogger     `yaml:"-"`
 	Version       string                 `yaml:"-"`
 	Debug         bool                   `yaml:"debug,omitempty"`
+	IPSet         IPSetServer            `yaml:"ipset"`
 	configPath    string
 }
 

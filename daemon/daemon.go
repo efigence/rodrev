@@ -1,9 +1,11 @@
 package daemon
 
 import (
+	"github.com/XANi/goneric"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/plugin/fence"
+	"github.com/efigence/rodrev/plugin/ipset"
 	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/query"
 	"github.com/efigence/rodrev/util"
@@ -107,6 +109,33 @@ func New(cfg config.Config) (*Daemon, error) {
 				time.Sleep(time.Second * 10)
 			}
 		}()
+	}
+	if len(cfg.IPSet.Sets) > 0 {
+		d.l.Infof("starting ipset management with sets [%+v]", goneric.MapSliceKey(cfg.IPSet.Sets))
+		cfg.IPSet.Logger = d.l.Named("ipset")
+		ipset, err := ipset.New(runtime, cfg.IPSet)
+		if err != nil {
+			// TODO alert/fail somehow
+			d.l.Errorf("starting ipset failed: %s", err)
+		} else {
+			for set, _ := range cfg.IPSet.Sets {
+				go func(setname string) {
+					for {
+						ch, err := d.node.GetEventsCh(d.prefix + "ipset/" + set)
+						if err != nil {
+							d.l.Errorf("error getting event channel for ipset [%s]: %s", err)
+							time.Sleep(time.Second * 60)
+							continue
+						}
+						err = ipset.EventListener(ch, setname)
+						if err != nil {
+							d.l.Errorf("error on ipset [%s] event listener: %s", err)
+						}
+						time.Sleep(time.Second * 10)
+					}
+				}(set)
+			}
+		}
 	}
 	return &d, nil
 }
