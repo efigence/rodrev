@@ -118,7 +118,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			// TODO alert/fail somehow
 			d.l.Errorf("starting ipset failed: %s", err)
 		} else {
-			for set, _ := range cfg.IPSet.Sets {
+			for set := range cfg.IPSet.Sets {
 				go func(setname string) {
 					for {
 						ch, err := d.node.GetEventsCh(d.prefix + "ipset/" + set)
