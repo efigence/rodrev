@@ -10,7 +10,7 @@ require (
 	github.com/pkg/term v1.1.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.1.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/zerosvc/go-zerosvc v0.1.4
 	go.uber.org/zap v1.14.1
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
@@ -20,6 +20,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.2.0 // indirect
+	github.com/efigence/go-ipset v0.0.1 // indirect
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
 	github.com/glycerine/goconvey v0.0.0-20190410193231-58a59202ab31 // indirect
 	github.com/glycerine/greenpack v5.1.1+incompatible // indirect
