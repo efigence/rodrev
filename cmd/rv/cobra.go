@@ -125,6 +125,19 @@ var fenceStatusCmd = &cobra.Command{
 	Short: "Check whether fencing is working on node",
 	Run:   FenceStatus,
 }
+var ipsetCmd = &cobra.Command{
+	Use:   "ipset",
+	Short: "fencing commands",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+	},
+}
+
+var ipsetAddCmd = &cobra.Command{
+	Use:   "add <group> <ipset> <addr>",
+	Short: "add address to ipset group",
+	Run:   IpsetAdd,
+}
 
 func cobraDefaultString(env string, defaultValue string) string {
 	e := os.Getenv(env)
@@ -206,4 +219,6 @@ func cobraInitCommands() {
 	fenceCmd.AddCommand(fenceRunCmd)
 	fenceCmd.AddCommand(fenceStatusCmd)
 	rootCmd.AddCommand(fenceCmd)
+	ipsetCmd.AddCommand(ipsetAddCmd)
+	rootCmd.AddCommand(ipsetCmd)
 }
