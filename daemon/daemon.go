@@ -118,22 +118,25 @@ func New(cfg config.Config) (*Daemon, error) {
 			// TODO alert/fail somehow
 			d.l.Errorf("starting ipset failed: %s", err)
 		} else {
-			for set := range cfg.IPSet.Sets {
-				go func(setname string) {
+			for _, setcfg := range cfg.IPSet.Sets {
+				go func(setname config.IPSet) {
 					for {
-						ch, err := d.node.GetEventsCh(d.prefix + "ipset/" + set)
+						ch, err := d.node.GetEventsCh(d.prefix + "ipset/" +
+							setcfg.BroadcastGroup +
+							"/" + setcfg.Name,
+						)
 						if err != nil {
 							d.l.Errorf("error getting event channel for ipset [%s]: %s", err)
 							time.Sleep(time.Second * 60)
 							continue
 						}
-						err = ipset.EventListener(ch, setname)
+						err = ipset.EventListener(ch, setname.Name)
 						if err != nil {
 							d.l.Errorf("error on ipset [%s] event listener: %s", err)
 						}
 						time.Sleep(time.Second * 10)
 					}
-				}(set)
+				}(setcfg)
 			}
 		}
 	}

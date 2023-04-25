@@ -56,19 +56,21 @@ func New(runtime *common.Runtime, cfg config.IPSetServer) (*IPSetManager, error)
 }
 
 func (i *IPSetManager) EventListener(evCh chan zerosvc.Event, setname string) error {
+	l := i.l.Named(setname)
 	for ev := range evCh {
 		var cmd IPsetCmd
 		err := ev.Unmarshal(&cmd)
 		if err != nil {
-			i.l.Errorf("error decoding command: %s", err)
+			l.Errorf("error decoding command: %s", err)
 		}
 		if set, ok := i.sets[cmd.IPSet]; ok {
 			err := set.Add(cmd.Addr)
 			if err != nil {
-				i.l.Errorf("error adding to set[%s]: %s", cmd.IPSet, err)
+				l.Errorf("error adding to set[%s]: %s", cmd.IPSet, err)
 			}
+			l.Infof("adding %s to set %s", cmd.IPSet, cmd.Addr)
 		} else {
-			i.l.Errorf("got command sent to nonexisting set: %s/%s", cmd.IPSet, cmd.Addr)
+			l.Errorf("got command sent to nonexisting set: %s/%s", cmd.IPSet, cmd.Addr)
 		}
 	}
 	return fmt.Errorf("channel closed[%s]", setname)
