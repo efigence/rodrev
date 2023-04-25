@@ -1,7 +1,6 @@
 package query
 
 import (
-	"github.com/k0kubun/pp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -37,7 +36,6 @@ func Test_traverseHash(t *testing.T) {
 	var f map[string]interface{}
 	err := yaml.Unmarshal([]byte(yt1), &f)
 	require.NoError(t, err)
-	pp.Print(f)
 	t.Run("string key", func(t *testing.T) {
 		v := traverseHash([]string{"string_key"}, f)
 		assert.IsType(t, string(""), v)
