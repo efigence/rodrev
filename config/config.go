@@ -12,8 +12,9 @@ import (
 
 type IPSet struct {
 	Type           string        `yaml:"type"`
-	Key            string        `yaml:"key"`
-	RotateInterval time.Duration `yaml:"rotate_interval"`
+	BroadcastGroup string        `yaml:"broadcast_group"`
+	Name           string        `yaml:"name"`
+	Timeout        time.Duration `yaml:"timeout"`
 }
 
 type IPSetServer struct {

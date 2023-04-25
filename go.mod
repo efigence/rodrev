@@ -4,7 +4,8 @@ go 1.18
 
 require (
 	github.com/XANi/go-yamlcfg v0.2.0
-	github.com/XANi/goneric v0.1.8
+	github.com/XANi/goneric v0.1.9
+	github.com/efigence/go-ipset v0.0.2
 	github.com/glycerine/zygomys v5.1.2+incompatible
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/pkg/term v1.1.0
@@ -20,7 +21,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.2.0 // indirect
-	github.com/efigence/go-ipset v0.0.1 // indirect
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
 	github.com/glycerine/goconvey v0.0.0-20190410193231-58a59202ab31 // indirect
 	github.com/glycerine/greenpack v5.1.1+incompatible // indirect
