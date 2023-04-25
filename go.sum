@@ -17,8 +17,6 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/XANi/go-yamlcfg v0.2.0 h1:KHPgKukS8RdM/Kznuf9/gH/2RhUzvEj9nAUalezWnug=
 github.com/XANi/go-yamlcfg v0.2.0/go.mod h1:J90VKs29UUrpi3xHG825Zx7wmb/Q+j07lK3Bvtxdj08=
-github.com/XANi/goneric v0.1.8 h1:Y2KRMf4jXYBTr9Db+0lree1wb1xsCyUbgoIwXzs+3WA=
-github.com/XANi/goneric v0.1.8/go.mod h1:Eu5qL8ajaeJlM6UsMQZIAPYHfnxdPMPLugUtZMHKjVg=
 github.com/XANi/goneric v0.1.9 h1:tvIGK4/FGyf3mDI+6nXNa/+f9dwdu/yTOIXb1yVMSyM=
 github.com/XANi/goneric v0.1.9/go.mod h1:Eu5qL8ajaeJlM6UsMQZIAPYHfnxdPMPLugUtZMHKjVg=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
