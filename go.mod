@@ -7,7 +7,6 @@ require (
 	github.com/XANi/goneric v0.1.9
 	github.com/efigence/go-ipset v0.0.2
 	github.com/glycerine/zygomys v5.1.2+incompatible
-	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/pkg/term v1.1.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.1.1
@@ -26,9 +25,6 @@ require (
 	github.com/glycerine/greenpack v5.1.1+incompatible // indirect
 	github.com/glycerine/liner v0.0.0-20160121172638-72909af234e0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
-	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/shurcooL/go v0.0.0-20191216061654-b114cc39af9f // indirect
