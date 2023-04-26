@@ -3,7 +3,6 @@ package ipset
 import (
 	"fmt"
 	"github.com/efigence/rodrev/common"
-	"time"
 )
 
 func Add(r *common.Runtime, group string, ipset string, addr string) error {
@@ -21,17 +20,18 @@ func Add(r *common.Runtime, group string, ipset string, addr string) error {
 	cmd.Prepare()
 	err = cmd.Send(r.MQPrefix + "ipset/" + group + "/" + ipset)
 	if err != nil {
-		return fmt.Errorf("error sending fence request: %s", err)
+		return fmt.Errorf("error sending ipset request: %s", err)
 	}
-	tmout := time.After(time.Second * 5)
-F:
-	for {
-		select {
-		case <-tmout:
-			break F
-		case ev := <-replyCh:
-			r.Log.Infof("got reply from %s", ev.NodeName())
-		}
-	}
+	// wait for reply
+	//	tmout := time.After(time.Second * 5)
+	//F:
+	//	for {
+	//		select {
+	//		case <-tmout:
+	//			break F
+	//		case ev := <-replyCh:
+	//			r.Log.Infof("got reply from %s", ev.NodeName())
+	//		}
+	//	}
 	return nil
 }
