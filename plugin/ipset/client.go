@@ -19,7 +19,7 @@ func Add(r *common.Runtime, group string, ipset string, addr string) error {
 	})
 	cmd.ReplyTo = replyPath
 	cmd.Prepare()
-	err = cmd.Send(r.MQPrefix + "fence/" + group + "/" + ipset)
+	err = cmd.Send(r.MQPrefix + "ipset/" + group + "/" + ipset)
 	if err != nil {
 		return fmt.Errorf("error sending fence request: %s", err)
 	}
