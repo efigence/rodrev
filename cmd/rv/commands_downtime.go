@@ -34,12 +34,13 @@ func Downtime(cmd *cobra.Command, args []string) {
 	}
 	err = ev.Marshal(&request)
 	if err != nil {
-		fmt.Printf("error marshalling request: %s", err)
+		fmt.Printf("error marshalling request: %s\n", err)
 		os.Exit(2)
 	}
-	err = ev.Send("downtime/" + runtime.FQDN)
+	err = ev.Send(cfg.MQPrefix + "downtime/" + runtime.FQDN)
 	if err != nil {
-		fmt.Printf("error sending request: %s", err)
+		fmt.Printf("error sending request: %s\n", err)
 		os.Exit(2)
 	}
+
 }
