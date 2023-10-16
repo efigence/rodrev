@@ -69,6 +69,12 @@ func (i *IPSetManager) EventListener(evCh chan zerosvc.Event, setname string) er
 				l.Errorf("error adding to set[%s]: %s", cmd.IPSet, err)
 			}
 			l.Infof("adding %s to set %s", cmd.IPSet, cmd.Addr)
+			// No reply, this should be audited
+			//re := i.runtime.Node.NewEvent()
+			//err = ev.Reply(re)
+			//if err != nil {
+			//	l.Errorf("err replying to %s: %s", ev.NodeName(), err)
+			//}
 		} else {
 			l.Errorf("got command sent to nonexisting set: %s/%s", cmd.IPSet, cmd.Addr)
 		}
