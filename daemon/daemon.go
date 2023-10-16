@@ -145,6 +145,7 @@ func New(cfg config.Config) (*Daemon, error) {
 		}
 	}
 	if len(cfg.IcingaAPIURL) > 0 {
+		d.l.Infof("starting downtime plugin [%s]", cfg.IcingaAPIURL)
 		api, err := downtime.NewDowntimeServer(downtime.Config{
 			Icinga2URL:  cfg.IcingaAPIURL,
 			Icinga2User: cfg.IcingaAPIUser,
