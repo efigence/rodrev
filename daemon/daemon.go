@@ -4,6 +4,7 @@ import (
 	"github.com/XANi/goneric"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
+	"github.com/efigence/rodrev/downtime"
 	"github.com/efigence/rodrev/plugin/fence"
 	"github.com/efigence/rodrev/plugin/ipset"
 	"github.com/efigence/rodrev/plugin/puppet"
@@ -140,6 +141,30 @@ func New(cfg config.Config) (*Daemon, error) {
 			}
 		}
 	}
+	if len(cfg.IcingaAPIURL) > 0 {
+		api, err := downtime.NewDowntimeServer(downtime.Config{
+			Icinga2URL:  cfg.IcingaAPIURL,
+			Icinga2User: cfg.IcingaAPIUser,
+			Icinga2Pass: cfg.IcingaAPIPass,
+		})
+		if err != nil {
+			d.l.Errorf("error initializing icinga api: %w", err)
+		} else {
+			for {
+				ch, err := d.node.GetEventsCh(d.prefix + "downtime/")
+				if err != nil {
+					d.l.Errorf("error initializing icinga api channel: %w", err)
+					goto endapi
+				}
+				api.Run(ch)
+				d.l.Infof("restarting downtime api channel")
+				time.Sleep(time.Second * 60)
+			}
+
+		}
+	}
+endapi:
+
 	return &d, nil
 }
 
