@@ -5,6 +5,7 @@ import (
 	"github.com/efigence/go-icinga2"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
 
@@ -57,6 +58,19 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 		}
 		if len(downtime.Host) < 1 || downtime.Duration <= 0 || downtime.Duration >= time.Hour*24*60 {
 			d.l.Warnf("need hostname and duration shorter than 2 months [%+v]", downtime)
+			continue
+		}
+		hostFromRoute := ""
+		route := strings.Split(ev.RoutingKey, "/")
+		if len(route) > 0 {
+			h := strings.Split(route[len(route)-1], ".")
+			if len(h) > 0 {
+				hostFromRoute = h[0]
+			}
+
+		}
+		if hostFromRoute != downtime.Host {
+			d.l.Errorf("host from route [%s] does not match requested host[%s]. Host is only allowed to downtime itself", ev.RoutingKey, downtime.Host)
 			continue
 		}
 		hosts, err := d.api.ScheduleHostDowntime(downtime.Host, icinga2.Downtime{
