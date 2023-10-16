@@ -60,9 +60,8 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 		}
 		hosts, err := d.api.ScheduleHostDowntime(downtime.Host, icinga2.Downtime{
 			Flexible:      false,
-			Start:         time.Time{},
-			End:           time.Time{},
-			Duration:      downtime.Duration,
+			Start:         time.Now(),
+			End:           time.Now().Add(downtime.Duration),
 			NoAllServices: false,
 			Author:        ev.NodeName(),
 			Comment:       downtime.Reason + ev.RoutingKey,
