@@ -39,6 +39,14 @@ var puppetCmd = &cobra.Command{
 	},
 }
 
+var downtimeCmd = &cobra.Command{
+	Use:     "downtime",
+	Short:   "set downtime on server",
+	Long:    "",
+	Example: "downtime example1 8h",
+	Run:     Downtime,
+}
+
 var puppetRunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "run puppet on one or more machines. Needs --target. Specify --target all to run on all discovered ones",
@@ -211,6 +219,7 @@ func cobraInitFlags() {
 	)
 }
 func cobraInitCommands() {
+	rootCmd.AddCommand(downtimeCmd)
 	rootCmd.AddCommand(versionCmd)
 	puppetCmd.AddCommand(puppetRunCmd)
 	puppetCmd.AddCommand(puppetStatusCmd)

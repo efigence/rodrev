@@ -150,7 +150,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			Icinga2URL:  cfg.IcingaAPIURL,
 			Icinga2User: cfg.IcingaAPIUser,
 			Icinga2Pass: cfg.IcingaAPIPass,
-			Logger:      d.l.Named("downtime"),
+			Logger:      d.l,
 		})
 		if err != nil {
 			d.l.Errorf("error initializing icinga api: %w", err)
