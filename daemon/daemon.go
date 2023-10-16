@@ -122,14 +122,17 @@ func New(cfg config.Config) (*Daemon, error) {
 			for _, setcfg := range cfg.IPSet.Sets {
 				go func(setname config.IPSet) {
 					for {
-						ch, err := d.node.GetEventsCh(d.prefix + "ipset/" +
-							setcfg.BroadcastGroup +
-							"/" + setcfg.Name,
-						)
+						topic := d.prefix + "ipset/" +
+							setname.BroadcastGroup +
+							"/" + setname.Name
+
+						ch, err := d.node.GetEventsCh(topic)
 						if err != nil {
 							d.l.Errorf("error getting event channel for ipset [%s]: %s", err)
 							time.Sleep(time.Second * 60)
 							continue
+						} else {
+							d.l.Infof("subscribing to %s", topic)
 						}
 						err = ipset.EventListener(ch, setname.Name)
 						if err != nil {

@@ -66,7 +66,9 @@ var puppetRunCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		filter := stringOrPanic(c.GetString("filter"))
-		log.Warnf("filter query: %s", filter)
+		if len(filter) > 0 {
+			log.Warnf("filter query: %s", filter)
+		}
 		client.PuppetRun(&runtime, target, filter, randomDelay)
 		log.Warnf("sending  puppet run request to %s", stringOrPanic(c.GetString("node")))
 	},
