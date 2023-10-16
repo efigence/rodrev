@@ -47,9 +47,9 @@ type Config struct {
 	Version       string                 `yaml:"-"`
 	Debug         bool                   `yaml:"debug,omitempty"`
 	IPSet         IPSetServer            `yaml:"ipset"`
-	IcingaAPIURL  string                 `yaml:icinga_api_url`
-	IcingaAPIUser string                 `yaml:icinga_api_user`
-	IcingaAPIPass string                 `yaml:icinga_api_pass`
+	IcingaAPIURL  string                 `yaml:"icinga_api_url"`
+	IcingaAPIUser string                 `yaml:"icinga_api_user"`
+	IcingaAPIPass string                 `yaml:"icinga_api_pass"`
 	configPath    string
 }
 
