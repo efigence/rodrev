@@ -156,7 +156,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			d.l.Errorf("error initializing icinga api: %w", err)
 		} else {
 			for {
-				ch, err := d.node.GetEventsCh(d.prefix + "downtime/")
+				ch, err := d.node.GetEventsCh(d.prefix + "downtime/#")
 				if err != nil {
 					d.l.Errorf("error initializing icinga api channel: %w", err)
 					goto endapi
