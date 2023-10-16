@@ -40,6 +40,9 @@ func NewDowntimeServer(cfg Config) (*DowntimeServer, error) {
 		return nil, fmt.Errorf("pass icinga url")
 	}
 	hosts, err := api.GetHosts()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't connect to [%s]: %w", cfg.Icinga2URL, err)
+	}
 	s.l.Infof("icinga2 api started, found [%d] hosts", len(hosts))
 	return s, nil
 }
