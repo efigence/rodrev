@@ -80,7 +80,7 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 			End:           time.Now().Add(downtime.Duration),
 			NoAllServices: false,
 			Author:        ev.NodeName(),
-			Comment:       downtime.Reason + ev.RoutingKey,
+			Comment:       downtime.Reason,
 		})
 		if err != nil {
 			d.l.Warnf("error downtiming %s: %w", downtime.Host, err)
