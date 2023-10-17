@@ -67,7 +67,7 @@ func GetCNFromCert(certRaw []byte) string {
 
 	cert, err := x509.ParseCertificate(block.Bytes) // handle error
 	if err != nil {
-		log.Fatal("error decoding PEM cert")
+		log.Fatalf("error decoding PEM cert: %s", err)
 	}
 	return cert.Subject.CommonName
 }
