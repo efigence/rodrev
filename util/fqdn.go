@@ -1,9 +1,6 @@
 package util
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -57,17 +54,4 @@ func GetFQDN() string {
 	currentFQDNTS = time.Now()
 	currentFQDNTSLock.Unlock()
 	return goHostname
-}
-
-func GetCNFromCert(certRaw []byte) string {
-	block, _ := pem.Decode(certRaw)
-	if block == nil {
-		log.Fatal("failed to parse PEM block containing the certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes) // handle error
-	if err != nil {
-		log.Fatalf("error decoding PEM cert: %s", err)
-	}
-	return cert.Subject.CommonName
 }
