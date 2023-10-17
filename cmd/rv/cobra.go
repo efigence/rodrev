@@ -43,7 +43,7 @@ var downtimeCmd = &cobra.Command{
 	Use:     "downtime",
 	Short:   "set downtime on server",
 	Long:    "",
-	Example: "downtime example1 8h",
+	Example: "downtime 8h | downtime --host abc 20m",
 	Run:     Downtime,
 }
 
@@ -216,6 +216,12 @@ func cobraInitFlags() {
 		"t",
 		0,
 		"add random delay to each run. Use when running many at once",
+	)
+
+	downtimeCmd.PersistentFlags().String(
+		"host",
+		"",
+		"hostname",
 	)
 }
 func cobraInitCommands() {
