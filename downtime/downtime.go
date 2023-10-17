@@ -71,7 +71,7 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 
 		}
 		if hostFromRoute != downtime.Host {
-			d.l.Errorf("host from route [%s] does not match requested host[%s]. Host is only allowed to downtime itself", ev.RoutingKey, downtime.Host)
+			d.l.Errorf("host from route [%s/%s] does not match requested host[%s]. Host is only allowed to downtime itself", ev.RoutingKey, hostFromRoute, downtime.Host)
 			continue
 		}
 		hosts, err := d.api.ScheduleHostDowntime(downtime.Host, icinga2.Downtime{
