@@ -16,6 +16,7 @@ import (
 type Runtime struct {
 	Node     *zerosvc.Node
 	FQDN     string
+	Certname string
 	MQPrefix string
 	Cfg      config.Config
 	Metadata map[string]interface{}

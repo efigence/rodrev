@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/efigence/rodrev/util"
 	"github.com/spf13/cobra"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -68,8 +69,6 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	quiet = boolOrPanic(c.GetBool("quiet"))
 	InitLog()
 
-	log.Infof("config: %s", cfg.GetConfigPath())
-
 	tr := zerosvc.NewTransport(
 		zerosvc.TransportMQTT,
 		cfg.MQAddress,
@@ -84,11 +83,25 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		log.Panicf("can't connect: %s", err)
 	}
 	node.SetTransport(tr)
-
+	certname := ""
+	if len(cfg.ClientCert) > 0 {
+		cert, err := ioutil.ReadFile(cfg.ClientCert)
+		if err != nil {
+			log.Panicf("could not load cert %s: %w", cfg.ClientCert, err)
+		}
+		certname = util.GetCNFromCert(cert)
+	}
+	if len(certname) == 0 {
+		log.Infof("config: %s", cfg.GetConfigPath())
+		certname = util.GetFQDN()
+	} else {
+		log.Infof("config: %s, cert: %s", cfg.GetConfigPath(), certname)
+	}
 	runtime := common.Runtime{
 		Node: node,
 		// TODO load from cert if possible
 		FQDN:     util.GetFQDN(),
+		Certname: certname,
 		MQPrefix: cfg.MQPrefix,
 		Log:      log,
 		Debug:    debug,
@@ -102,6 +115,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	if !outputModeRe.MatchString(outputMode) {
 		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
 	}
+
 	return cfg, runtime
 
 }
