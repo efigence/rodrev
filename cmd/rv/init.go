@@ -43,6 +43,9 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		"./cfg/client-local.yaml",
 		"./cfg/client.yaml",
 	}
+	if len(os.Getenv("RV_CONFIG")) > 0 {
+		cfgFiles = append([]string{os.Getenv("RV_CONFIG")}, cfgFiles...)
+	}
 	userCfg, err := c.GetString("config")
 	if err == nil && len(userCfg) > 0 {
 		if _, err := os.Stat(userCfg); os.IsNotExist(err) {
