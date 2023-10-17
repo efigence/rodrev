@@ -18,7 +18,7 @@ func Downtime(cmd *cobra.Command, args []string) {
 	c := cmd.Flags()
 	hostRaw, err := c.GetString("host")
 	if err != nil {
-		fmt.Printf("could not get host flag: %w", err)
+		fmt.Printf("could not get host flag: %s", err)
 	}
 	if len(hostRaw) == 0 {
 		hostRaw, _ = os.Hostname()
