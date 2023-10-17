@@ -65,7 +65,8 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 		if len(route) > 0 {
 			h := strings.Split(route[len(route)-1], ".")
 			if len(h) > 0 {
-				hostFromRoute = h[0]
+				hostFromRoute = strings.TrimPrefix(h[0], "client_")
+
 			}
 
 		}
