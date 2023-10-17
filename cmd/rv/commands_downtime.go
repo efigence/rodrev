@@ -35,8 +35,8 @@ func Downtime(cmd *cobra.Command, args []string) {
 	}
 
 	reason := ""
-	if len(args) > 2 {
-		reason = strings.Join(args[2:], " ")
+	if len(args) > 1 {
+		reason = strings.Join(args[1:], " ")
 	}
 	request := downtime.DowntimeRequest{
 		Host:     hostRaw,
