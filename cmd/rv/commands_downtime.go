@@ -10,14 +10,25 @@ import (
 )
 
 func Downtime(cmd *cobra.Command, args []string) {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		cmd.Help()
 		os.Exit(1)
 	}
+
+	c := cmd.Flags()
+	hostRaw, err := c.GetString("host")
+	if err != nil {
+		fmt.Printf("could not get host flag: %w", err)
+	}
+	if len(hostRaw) == 0 {
+		hostRaw, _ = os.Hostname()
+	}
+	durationRaw := args[0]
+
 	cfg, runtime := Init(cmd)
 	_ = cfg
 	ev := runtime.Node.NewEvent()
-	duration, err := time.ParseDuration(args[1])
+	duration, err := time.ParseDuration(durationRaw)
 	if err != nil {
 		fmt.Printf("error parsing duration [%s]: %s. Example format: 30m, 23h20m. Only hms supported", args[1], err)
 		os.Exit(1)
@@ -28,7 +39,7 @@ func Downtime(cmd *cobra.Command, args []string) {
 		reason = strings.Join(args[2:], " ")
 	}
 	request := downtime.DowntimeRequest{
-		Host:     args[0],
+		Host:     hostRaw,
 		Duration: duration,
 		Reason:   reason,
 	}
