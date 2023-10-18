@@ -66,6 +66,12 @@ var rootCmd = &cobra.Command{
 				println(sig)
 				log.Warnf("got HUP, exiting in 1 minute")
 				time.Sleep(time.Minute)
+				go func() {
+					time.Sleep(time.Minute * 5)
+					log.Errorf("critical exit, that should not happen, check if exit channel is handled correctly")
+					os.Exit(0)
+				}()
+
 				exit <- 0
 			}
 		}()
