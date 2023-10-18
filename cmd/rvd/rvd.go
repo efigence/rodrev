@@ -5,7 +5,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"os"
 )
-import _ "net/http/pprof"
 
 var version string
 var log *zap.SugaredLogger
