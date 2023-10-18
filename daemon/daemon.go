@@ -90,7 +90,7 @@ func New(cfg config.Config) (*Daemon, error) {
 				time.Sleep(time.Second * 10)
 				continue
 			}
-			puppetState.Update(mon.Ok, fmt.Sprintf("ok", err))
+			puppetState.Update(mon.Ok, "ok")
 			err = pu.EventListener(ch)
 			puppetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 			d.l.Errorf("plugin puppet exited: %s, reconnecting in 10s", err)
@@ -117,7 +117,7 @@ func New(cfg config.Config) (*Daemon, error) {
 					time.Sleep(time.Second * 10)
 					continue
 				}
-				fencingState.Update(mon.Ok, fmt.Sprintf("ok", err))
+				fencingState.Update(mon.Ok, "ok")
 
 				err = f.EventListener(ch)
 				fencingState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
@@ -158,7 +158,7 @@ func New(cfg config.Config) (*Daemon, error) {
 							ipsetState.Update(mon.StateCritical, fmt.Sprintf("listen err: %s", err))
 							d.l.Errorf("error on ipset [%s] event listener: %s", err)
 						} else {
-							ipsetState.Update(mon.StateCritical, fmt.Sprintf("ipset listening exited", err))
+							ipsetState.Update(mon.StateCritical, "ipset listening exited")
 						}
 						time.Sleep(time.Second * 10)
 					}
