@@ -1,15 +1,19 @@
 package daemon
 
 import (
+	"fmt"
 	"github.com/XANi/goneric"
+	"github.com/efigence/go-mon"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/downtime"
+	"github.com/efigence/rodrev/embedfs"
 	"github.com/efigence/rodrev/plugin/fence"
 	"github.com/efigence/rodrev/plugin/ipset"
 	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/query"
 	"github.com/efigence/rodrev/util"
+	"github.com/efigence/rodrev/web"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
@@ -76,14 +80,19 @@ func New(cfg config.Config) (*Daemon, error) {
 	}
 	pu.StartServer()
 	go func() {
+		puppetState := mon.GlobalStatus.MustNewComponent("puppet")
+		puppetState.Update(mon.StateUnknown, "initializing")
 		for {
 			ch, err := d.node.GetEventsCh(d.prefix + "puppet/#")
 			if err != nil {
+				puppetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 				d.l.Errorf("error connecting to channel: %s", err)
 				time.Sleep(time.Second * 10)
 				continue
 			}
+			puppetState.Update(mon.Ok, fmt.Sprintf("ok", err))
 			err = pu.EventListener(ch)
+			puppetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 			d.l.Errorf("plugin puppet exited: %s, reconnecting in 10s", err)
 			time.Sleep(time.Second * 10)
 		}
@@ -98,25 +107,33 @@ func New(cfg config.Config) (*Daemon, error) {
 		}
 		d.l.Infof("starting fencing plugin")
 		go func() {
+			fencingState := mon.GlobalStatus.MustNewComponent("fencing")
+			fencingState.Update(mon.StateUnknown, "initializing")
 			for {
 				ch, err := d.node.GetEventsCh(d.prefix + "fence/" + d.fqdn)
 				if err != nil {
+					fencingState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 					d.l.Errorf("error connecting to channel: %s", err)
 					time.Sleep(time.Second * 10)
 					continue
 				}
+				fencingState.Update(mon.Ok, fmt.Sprintf("ok", err))
+
 				err = f.EventListener(ch)
+				fencingState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 				d.l.Errorf("plugin fence exited: %s, reconnecting in 10s", err)
 				time.Sleep(time.Second * 10)
 			}
 		}()
 	}
 	if len(cfg.IPSet.Sets) > 0 {
+		ipsetState := mon.GlobalStatus.MustNewComponent("ipset")
+		ipsetState.Update(mon.StateUnknown, "initializing")
 		d.l.Infof("starting ipset management with sets [%+v]", goneric.MapSliceKey(cfg.IPSet.Sets))
 		cfg.IPSet.Logger = d.l.Named("ipset")
 		ipset, err := ipset.New(runtime, cfg.IPSet)
 		if err != nil {
-			// TODO alert/fail somehow
+			ipsetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 			d.l.Errorf("starting ipset failed: %s", err)
 		} else {
 			for _, setcfg := range cfg.IPSet.Sets {
@@ -128,15 +145,20 @@ func New(cfg config.Config) (*Daemon, error) {
 
 						ch, err := d.node.GetEventsCh(topic)
 						if err != nil {
+							ipsetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 							d.l.Errorf("error getting event channel for ipset [%s]: %s", err)
 							time.Sleep(time.Second * 60)
 							continue
 						} else {
+							ipsetState.Update(mon.StateOk, "ok")
 							d.l.Infof("subscribing to %s", topic)
 						}
 						err = ipset.EventListener(ch, setname.Name)
 						if err != nil {
+							ipsetState.Update(mon.StateCritical, fmt.Sprintf("listen err: %s", err))
 							d.l.Errorf("error on ipset [%s] event listener: %s", err)
+						} else {
+							ipsetState.Update(mon.StateCritical, fmt.Sprintf("ipset listening exited", err))
 						}
 						time.Sleep(time.Second * 10)
 					}
@@ -145,6 +167,8 @@ func New(cfg config.Config) (*Daemon, error) {
 		}
 	}
 	if len(cfg.IcingaAPIURL) > 0 {
+		icingaApiState := mon.GlobalStatus.MustNewComponent("icinga_api")
+		icingaApiState.Update(mon.StateUnknown, "initializing")
 		d.l.Infof("starting downtime plugin [%s]", cfg.IcingaAPIURL)
 		api, err := downtime.NewDowntimeServer(downtime.Config{
 			Icinga2URL:  cfg.IcingaAPIURL,
@@ -153,15 +177,19 @@ func New(cfg config.Config) (*Daemon, error) {
 			Logger:      d.l,
 		})
 		if err != nil {
+			icingaApiState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 			d.l.Errorf("error initializing icinga api: %w", err)
 		} else {
 			for {
 				ch, err := d.node.GetEventsCh(d.prefix + "downtime/#")
 				if err != nil {
 					d.l.Errorf("error initializing icinga api channel: %w", err)
+					icingaApiState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 					goto endapi
 				}
+				icingaApiState.Update(mon.StateOk, "ok")
 				api.Run(ch)
+				icingaApiState.Update(mon.StateCritical, "disconnected")
 				d.l.Infof("restarting downtime api channel")
 				time.Sleep(time.Second * 60)
 			}
@@ -170,6 +198,17 @@ func New(cfg config.Config) (*Daemon, error) {
 	}
 endapi:
 
+	go func() {
+		web, err := web.New(web.Config{
+			Logger:       d.l,
+			AccessLogger: d.l.Named("access"),
+		}, embedfs.Embedded)
+		if err != nil {
+			d.l.Errorf("error initializing web server: %s", err)
+			return
+		}
+		d.l.Errorf("error running webserver: %s", web.Run())
+	}()
 	return &d, nil
 }
 
