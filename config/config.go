@@ -51,6 +51,8 @@ type Config struct {
 	IcingaAPIUser string                 `yaml:"icinga_api_user"`
 	IcingaAPIPass string                 `yaml:"icinga_api_pass"`
 	configPath    string
+	// hook for when a component wants to exit
+	ExitFunc func(reason string) `yaml:"-"`
 }
 
 func (c *Config) GetDefaultConfig() string {

@@ -25,9 +25,10 @@ type Daemon struct {
 	runtime *common.Runtime
 	query   *query.Engine
 
-	l      *zap.SugaredLogger
-	prefix string
-	fqdn   string
+	l        *zap.SugaredLogger
+	prefix   string
+	fqdn     string
+	exitFunc func(reason string)
 }
 
 func New(cfg config.Config) (*Daemon, error) {
@@ -35,6 +36,7 @@ func New(cfg config.Config) (*Daemon, error) {
 	d.prefix = cfg.MQPrefix
 	// TODO load from cert
 	d.fqdn = util.GetFQDN()
+	d.exitFunc = cfg.ExitFunc
 	d.l = cfg.Logger
 	tr := zerosvc.NewTransport(zerosvc.TransportMQTT, cfg.MQAddress, zerosvc.TransportMQTTConfig{
 		// cleanup retained heartbeat by sending empty message
@@ -216,6 +218,7 @@ func (d *Daemon) heartbeat(interval time.Duration) {
 	if interval == 0 {
 		interval = time.Minute
 	}
+	errctr := 0
 	for {
 		ev := d.node.NewHeartbeat()
 		t := time.Now().Add(interval * 3)
@@ -223,10 +226,25 @@ func (d *Daemon) heartbeat(interval time.Duration) {
 		hbPath := d.prefix + "heartbeat/" + d.fqdn
 		err := d.node.SendEvent(hbPath, ev)
 		if err != nil {
-			d.l.Warnf("could not send heartbeat: %s")
+			errctr++
+			d.l.Warnf("could not send heartbeat: %s", err)
+		} else {
+			if errctr >= 1 {
+				errctr--
+			}
 		}
+		if errctr > 60 {
+			go d.exit()
+		}
+
 		d.l.Debugf("HB sent to %s", hbPath)
 		time.Sleep(interval)
 	}
+}
 
+func (d *Daemon) exit() {
+	if d.exitFunc != nil {
+		d.l.Error("exiting coz of heartbeat failures")
+		d.exitFunc("queue heartbeat failed")
+	}
 }

@@ -48,6 +48,10 @@ var rootCmd = &cobra.Command{
 		} else {
 			log.Infof("loaded config from %s", cfg.GetConfigPath())
 		}
+		cfg.ExitFunc = func(reason string) {
+			log.Infof("exiting because of exit trigger: %s", reason)
+			exit <- 1
+		}
 		common.MergeCliConfig(&cfg, cmd)
 		log.Warnf("%+v", cfg)
 
