@@ -67,7 +67,7 @@ func Discover(r *common.Runtime) (
 
 			ts := ev.TS()
 			hbNode.LastUpdate = &ts
-			for k, _ := range hb.Services {
+			for k := range hb.Services {
 				if _, ok := serviceMap[k]; !ok {
 					serviceMap[k] = make([]common.Node, 0)
 				}
