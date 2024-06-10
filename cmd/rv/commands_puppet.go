@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"github.com/efigence/rodrev/client"
+	"github.com/efigence/rodrev/util"
 	"github.com/spf13/cobra"
 	"os"
 	"strconv"
@@ -14,9 +15,9 @@ func StatusPuppet(cmd *cobra.Command) error {
 	cfg, runtime := Init(cmd)
 	c := cmd.Flags()
 	_ = cfg
-	status := client.PuppetStatus(&runtime, stringOrPanic(c.GetString("filter")))
+	status := client.PuppetStatus(&runtime, util.StringOrPanic(c.GetString("filter")))
 
-	switch stringOrPanic(c.GetString("output-format")) {
+	switch util.StringOrPanic(c.GetString("output-format")) {
 	case outStderr:
 		log.Info("puppet status")
 		for node, summary := range status {

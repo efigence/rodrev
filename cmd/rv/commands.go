@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"github.com/efigence/rodrev/client"
+	"github.com/efigence/rodrev/util"
 	"github.com/spf13/cobra"
 	"os"
 	"sort"
@@ -21,7 +22,7 @@ func StatusRodrev(cmd *cobra.Command) error {
 		log.Errorf("error running discovery: %s", err)
 	}
 	log.Infof("services:")
-	switch stringOrPanic(c.GetString("output-format")) {
+	switch util.StringOrPanic(c.GetString("output-format")) {
 	case outStderr:
 		for service, nodes := range services {
 			log.Infof("  %s:", service)
