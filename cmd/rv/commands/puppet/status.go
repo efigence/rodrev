@@ -1,9 +1,10 @@
-package main
+package puppet
 
 import (
 	"encoding/csv"
 	"encoding/json"
 	"github.com/efigence/rodrev/client"
+	"github.com/efigence/rodrev/cmd/rv/clinit"
 	"github.com/efigence/rodrev/util"
 	"github.com/spf13/cobra"
 	"os"
@@ -11,14 +12,14 @@ import (
 	"time"
 )
 
-func StatusPuppet(cmd *cobra.Command) error {
-	cfg, runtime := Init(cmd)
+func Status(cmd *cobra.Command) {
+	cfg, runtime, log := clinit.Init(cmd)
 	c := cmd.Flags()
 	_ = cfg
 	status := client.PuppetStatus(&runtime, util.StringOrPanic(c.GetString("filter")))
 
 	switch util.StringOrPanic(c.GetString("output-format")) {
-	case outStderr:
+	case clinit.OutStderr:
 		log.Info("puppet status")
 		for node, summary := range status {
 			log.Infof("%s: %s, changes: %d/%d",
@@ -28,7 +29,7 @@ func StatusPuppet(cmd *cobra.Command) error {
 				summary.Resources.Total,
 			)
 		}
-	case outCsv:
+	case clinit.OutCsv:
 		csvW := csv.NewWriter(os.Stdout)
 		csvW.Write([]string{
 			"fqdn",
@@ -55,11 +56,10 @@ func StatusPuppet(cmd *cobra.Command) error {
 			})
 		}
 		csvW.Flush()
-	case outJson:
+	case clinit.OutJson:
 		err := json.NewEncoder(os.Stdout).Encode(&status)
 		if err != nil {
 			log.Errorf("error encoding node data: %s", err)
 		}
 	}
-	return nil
 }

@@ -1,4 +1,4 @@
-package main
+package clinit
 
 import (
 	"github.com/XANi/go-yamlcfg"
@@ -8,13 +8,21 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	"github.com/zerosvc/go-zerosvc"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 )
 
-func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
+const (
+	OutStderr = "stderr"
+	OutCsv    = "csv"
+	OutJson   = "json"
+)
+
+func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger) {
 	c := cmd.Flags()
 	cfgFiles := []string{
 		"$HOME/.config/rodrev/client.conf",
@@ -25,6 +33,9 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	if len(os.Getenv("RV_CONFIG")) > 0 {
 		cfgFiles = append([]string{os.Getenv("RV_CONFIG")}, cfgFiles...)
 	}
+	debug := util.BoolOrPanic(c.GetBool("debug"))
+	quiet := util.BoolOrPanic(c.GetBool("quiet"))
+	log := InitLog(debug, quiet)
 	userCfg, err := c.GetString("config")
 	if err == nil && len(userCfg) > 0 {
 		if _, err := os.Stat(userCfg); os.IsNotExist(err) {
@@ -43,9 +54,6 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		}
 	}
 	common.MergeCliConfig(&cfg, cmd)
-	debug = util.BoolOrPanic(c.GetBool("debug"))
-	quiet = util.BoolOrPanic(c.GetBool("quiet"))
-	InitLog()
 
 	tr := zerosvc.NewTransport(
 		zerosvc.TransportMQTT,
@@ -88,12 +96,54 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	outputMode := util.StringOrPanic(c.GetString("output-format"))
 	outputModeRe := regexp.MustCompile(
 		"^" +
-			strings.Join([]string{outCsv, outJson, outStderr}, "|") +
+			strings.Join([]string{OutCsv, OutJson, OutStderr}, "|") +
 			"$")
 	if !outputModeRe.MatchString(outputMode) {
 		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
 	}
 
-	return cfg, runtime
+	return cfg, runtime, log
 
+}
+func InitLog(debug, quiet bool) *zap.SugaredLogger {
+	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
+	// naive systemd detection. Drop timestamp if running under it
+	// if os.Getenv("INVOCATION_ID") != "" || os.Getenv("JOURNAL_STREAM") != "" {
+	// 	consoleEncoderConfig.TimeKey = ""
+	// }
+	consoleEncoderConfig.TimeKey = ""
+	consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig)
+	consoleStderr := zapcore.Lock(os.Stderr)
+	_ = consoleStderr
+	filterAll := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return true })
+	filterHighPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.ErrorLevel
+	})
+	filterQuiet := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.WarnLevel
+	})
+	filterInfo := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.InfoLevel
+	})
+	var logger *zap.Logger
+	if debug {
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterAll)
+		logger = zap.New(core).WithOptions(
+			zap.Development(),
+			zap.AddCaller(),
+			zap.AddStacktrace(filterHighPriority),
+		)
+	} else if quiet {
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterQuiet)
+		logger = zap.New(core).WithOptions(
+			zap.AddCaller(),
+		)
+	} else {
+		core := zapcore.NewCore(consoleEncoder, os.Stderr, filterInfo)
+		logger = zap.New(core).WithOptions(
+			zap.AddCaller(),
+		)
+	}
+	return logger.Sugar()
 }
