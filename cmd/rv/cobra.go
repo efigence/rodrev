@@ -64,6 +64,11 @@ var puppetStatusCmd = &cobra.Command{
 		puppet.Status(cmd)
 	},
 }
+var puppetFactCmd = &cobra.Command{
+	Use:   "fact",
+	Short: "show fact value",
+	Run:   puppet.Fact,
+}
 
 // Status
 var statusCmd = &cobra.Command{
@@ -204,6 +209,7 @@ func cobraInitCommands() {
 	rootCmd.AddCommand(versionCmd)
 	puppetCmd.AddCommand(puppetRunCmd)
 	puppetCmd.AddCommand(puppetStatusCmd)
+	puppetCmd.AddCommand(puppetFactCmd)
 	rootCmd.AddCommand(puppetCmd)
 	statusCmd.AddCommand(statusPuppetCmd)
 	statusCmd.AddCommand(statusRodrevCmd)
