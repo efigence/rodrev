@@ -87,7 +87,21 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		} else { // ignore
 			p.l.Debugf("got request for path %s, ignoring as it does  not match", ev.RoutingKey, p.fqdn)
 		}
-
+	case Fact:
+		var opts FactOptions
+		err := json.Unmarshal(cmd.Parameters, &opts)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling [%s]: %s", string(cmd.Parameters), err)
+		}
+		facts := *(p.facts.Map())
+		fact := map[string]interface{}{
+			opts.Name: facts[opts.Name],
+		}
+		re.Marshal(&fact)
+		err = ev.Reply(re)
+		if err != nil {
+			return err
+		}
 	default:
 		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
