@@ -31,6 +31,7 @@ type Config struct {
 const (
 	Status = "status"
 	Run    = "run"
+	Fact   = "fact"
 )
 
 var DefaultConfig = Config{

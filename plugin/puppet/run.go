@@ -25,6 +25,9 @@ type RunOptions struct {
 	Delay          time.Duration
 	RandomizeDelay bool
 }
+type FactOptions struct {
+	Name string
+}
 
 func (p *Puppet) Run(opt RunOptions) RunStatus {
 	if !p.runLock.TryAcquire(1) {
