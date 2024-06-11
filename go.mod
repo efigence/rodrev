@@ -7,6 +7,9 @@ require (
 	github.com/XANi/goneric v1.1.0
 	github.com/efigence/go-icinga2 v0.2.0
 	github.com/efigence/go-ipset v0.0.2
+	github.com/efigence/go-mon v1.4.1
+	github.com/gin-contrib/zap v0.2.0
+	github.com/gin-gonic/gin v1.9.1
 	github.com/glycerine/zygomys v5.1.2+incompatible
 	github.com/pkg/term v1.1.0
 	github.com/satori/go.uuid v1.2.0
@@ -25,12 +28,9 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.4.3 // indirect
 	github.com/efigence/go-libs/ewma v0.0.1 // indirect
-	github.com/efigence/go-mon v1.4.1 // indirect
 	github.com/efigence/go-monitoring v0.0.3 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-contrib/zap v0.2.0 // indirect
-	github.com/gin-gonic/gin v1.9.1 // indirect
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
 	github.com/glycerine/goconvey v0.0.0-20190410193231-58a59202ab31 // indirect
 	github.com/glycerine/greenpack v5.1.1+incompatible // indirect
