@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/cmd/rv/commands/downtime"
+	"github.com/efigence/rodrev/cmd/rv/commands/fence"
+	"github.com/efigence/rodrev/cmd/rv/commands/ipset"
 	"github.com/efigence/rodrev/cmd/rv/commands/puppet"
 	"github.com/spf13/cobra"
 	"os"
@@ -43,7 +46,7 @@ var downtimeCmd = &cobra.Command{
 	Short:   "set downtime on server",
 	Long:    "",
 	Example: "downtime 8h | downtime --host abc 20m",
-	Run:     Downtime,
+	Run:     downtime.Downtime,
 }
 
 var puppetRunCmd = &cobra.Command{
@@ -99,13 +102,13 @@ var fenceCmd = &cobra.Command{
 var fenceRunCmd = &cobra.Command{
 	Use:   "run <node>",
 	Short: "Run fencing on node specified as parameter",
-	Run:   FenceRun,
+	Run:   fence.Run,
 }
 
 var fenceStatusCmd = &cobra.Command{
 	Use:   "status <node>",
 	Short: "Check whether fencing is working on node",
-	Run:   FenceStatus,
+	Run:   fence.Status,
 }
 var ipsetCmd = &cobra.Command{
 	Use:   "ipset",
@@ -118,7 +121,7 @@ var ipsetCmd = &cobra.Command{
 var ipsetAddCmd = &cobra.Command{
 	Use:   "add <group> <ipset> <addr>",
 	Short: "add address to ipset group",
-	Run:   IpsetAdd,
+	Run:   ipset.Add,
 }
 
 func cobraDefaultString(env string, defaultValue string) string {
