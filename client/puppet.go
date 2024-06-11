@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
+	"github.com/k0kubun/pp/v3"
 	"github.com/zerosvc/go-zerosvc"
 	"time"
 )
@@ -110,6 +111,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	}
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
+	r.Log.Debugf("ev: %s", pp.Sprint(query))
 	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
@@ -117,6 +119,10 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	r.Log.Info("waiting 4s for response")
 	go func() {
 		for ev := range replyCh {
+			if r.Debug {
+				r.Log.Debugf("received event: %s", pp.Sprint(ev))
+				r.Log.Debugf("body: %s", string(ev.Body))
+			}
 			var fact map[string]interface{}
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {

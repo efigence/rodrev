@@ -22,7 +22,7 @@ func Fact(cmd *cobra.Command, args []string) {
 	switch util.StringOrPanic(c.GetString("output-format")) {
 	case clinit.OutStderr:
 		log.Info("puppet status")
-		pp.Print(status)
+		log.Info(pp.Sprint(status))
 	//case clinit.OutCsv:
 	//	csvW := csv.NewWriter(os.Stdout)
 	//	csvW.Write([]string{

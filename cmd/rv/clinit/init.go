@@ -101,7 +101,6 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 	if !outputModeRe.MatchString(outputMode) {
 		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
 	}
-
 	return cfg, runtime, log
 
 }
