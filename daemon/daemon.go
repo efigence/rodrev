@@ -68,6 +68,7 @@ func New(cfg config.Config) (*Daemon, error) {
 		Log:      cfg.Logger,
 		Metadata: cfg.NodeMeta,
 		Cfg:      cfg,
+		Debug:    cfg.Debug,
 	}
 	d.runtime = runtime
 	d.query = query.NewQueryEngine(runtime)
