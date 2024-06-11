@@ -33,6 +33,9 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	}
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
+	if r.Debug {
+		r.Log.Debugf("ev: %s", pp.Sprint(query))
+	}
 	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
@@ -40,6 +43,9 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	r.Log.Info("waiting 4s for response")
 	go func() {
 		for ev := range replyCh {
+			if r.Debug {
+				r.Log.Debugf("recv: %s", pp.Sprint(query))
+			}
 			var summary puppet.LastRunSummary
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {
@@ -111,7 +117,9 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	}
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
-	r.Log.Debugf("ev: %s", pp.Sprint(query))
+	if r.Debug {
+		r.Log.Debugf("ev: %s", pp.Sprint(query))
+	}
 	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)
