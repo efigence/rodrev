@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/efigence/rodrev/client"
+	"github.com/efigence/rodrev/cmd/rv/commands/downtime"
+	"github.com/efigence/rodrev/cmd/rv/commands/fence"
+	"github.com/efigence/rodrev/cmd/rv/commands/ipset"
+	"github.com/efigence/rodrev/cmd/rv/commands/puppet"
 	"github.com/spf13/cobra"
 	"os"
-	"time"
 )
 
 // Root
@@ -44,41 +46,14 @@ var downtimeCmd = &cobra.Command{
 	Short:   "set downtime on server",
 	Long:    "",
 	Example: "downtime 8h | downtime --host abc 20m",
-	Run:     Downtime,
+	Run:     downtime.Downtime,
 }
 
 var puppetRunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "run puppet on one or more machines. Needs --target. Specify --target all to run on all discovered ones",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, runtime := Init(cmd)
-		c := cmd.Flags()
-		_ = cfg
-		target := stringOrPanic(c.GetString("node"))
-		if len(target) == 0 {
-			target = stringOrPanic(c.GetString("target"))
-		}
-		randomDelay := durationOrPanic(c.GetDuration("random-delay"))
-		if len(target) == 0 {
-			log.Warn("need --target parameter")
-			os.Exit(1)
-		}
-		if stringOrPanic(c.GetString("node")) == "all" &&
-			randomDelay == 0 &&
-			len(stringOrPanic(c.GetString("filter"))) > 3 {
-			randomDelay = time.Second
-		}
-		if stringOrPanic(c.GetString("node")) == "all" && randomDelay == 0 {
-			log.Errorf("do not run all 'all' without delay, if you REALLY need to run all nodes at once set random-delay to '1s' ")
-			cmd.Help()
-			os.Exit(1)
-		}
-		filter := stringOrPanic(c.GetString("filter"))
-		if len(filter) > 0 {
-			log.Warnf("filter query: %s", filter)
-		}
-		client.PuppetRun(&runtime, target, filter, randomDelay)
-		log.Warnf("sending  puppet run request to %s", stringOrPanic(c.GetString("node")))
+		puppet.Run(cmd)
 	},
 }
 
@@ -86,7 +61,7 @@ var puppetStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "display status of last puppet run",
 	Run: func(cmd *cobra.Command, args []string) {
-		StatusPuppet(cmd)
+		puppet.Status(cmd)
 	},
 }
 
@@ -103,7 +78,7 @@ var statusPuppetCmd = &cobra.Command{
 	Use:   "puppet",
 	Short: "Puppet Status",
 	Run: func(cmd *cobra.Command, args []string) {
-		StatusPuppet(cmd)
+		puppet.Status(cmd)
 
 	},
 }
@@ -127,13 +102,13 @@ var fenceCmd = &cobra.Command{
 var fenceRunCmd = &cobra.Command{
 	Use:   "run <node>",
 	Short: "Run fencing on node specified as parameter",
-	Run:   FenceRun,
+	Run:   fence.Run,
 }
 
 var fenceStatusCmd = &cobra.Command{
 	Use:   "status <node>",
 	Short: "Check whether fencing is working on node",
-	Run:   FenceStatus,
+	Run:   fence.Status,
 }
 var ipsetCmd = &cobra.Command{
 	Use:   "ipset",
@@ -146,7 +121,7 @@ var ipsetCmd = &cobra.Command{
 var ipsetAddCmd = &cobra.Command{
 	Use:   "add <group> <ipset> <addr>",
 	Short: "add address to ipset group",
-	Run:   IpsetAdd,
+	Run:   ipset.Add,
 }
 
 func cobraDefaultString(env string, defaultValue string) string {

@@ -1,41 +1,19 @@
 package main
 
 import (
-	"fmt"
+	"github.com/XANi/go-yamlcfg"
+	"github.com/efigence/rodrev/common"
+	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/util"
+	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
+	"github.com/zerosvc/go-zerosvc"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/XANi/go-yamlcfg"
-	"github.com/efigence/rodrev/common"
-	"github.com/efigence/rodrev/config"
-	uuid "github.com/satori/go.uuid"
-	"github.com/zerosvc/go-zerosvc"
 )
 
-func stringOrPanic(s string, err error) string {
-	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s", err))
-	}
-	return s
-}
-
-func boolOrPanic(b bool, err error) bool {
-	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s", err))
-	}
-	return b
-}
-func durationOrPanic(d time.Duration, err error) time.Duration {
-	if err != nil {
-		panic(fmt.Sprintf("error getting argument: %s", err))
-	}
-	return d
-}
 func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	c := cmd.Flags()
 	cfgFiles := []string{
@@ -65,8 +43,8 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		}
 	}
 	common.MergeCliConfig(&cfg, cmd)
-	debug = boolOrPanic(c.GetBool("debug"))
-	quiet = boolOrPanic(c.GetBool("quiet"))
+	debug = util.BoolOrPanic(c.GetBool("debug"))
+	quiet = util.BoolOrPanic(c.GetBool("quiet"))
 	InitLog()
 
 	tr := zerosvc.NewTransport(
@@ -107,7 +85,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		Debug:    debug,
 		Cfg:      cfg,
 	}
-	outputMode := stringOrPanic(c.GetString("output-format"))
+	outputMode := util.StringOrPanic(c.GetString("output-format"))
 	outputModeRe := regexp.MustCompile(
 		"^" +
 			strings.Join([]string{outCsv, outJson, outStderr}, "|") +
