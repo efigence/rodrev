@@ -110,7 +110,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	err = query.Marshal(&puppet.PuppetCmdSend{
 		Command:    puppet.Fact,
 		Filter:     f,
-		Parameters: nil,
+		Parameters: puppet.FactOptions{Name: factName},
 	})
 	if err != nil {
 		r.Log.Panicf("error marshalling command: %s", err)
