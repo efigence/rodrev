@@ -134,7 +134,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 			var fact map[string]interface{}
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Warnf("skipping message, no fqdn header: %s", ev)
+				r.Log.Warnf("skipping message, no fqdn header: %s", util.PPEvent(&ev))
 				continue
 			} else {
 				fqdn = v
