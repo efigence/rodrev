@@ -1,7 +1,8 @@
-package main
+package downtime
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/cmd/rv/clinit"
 	"github.com/efigence/rodrev/downtime"
 	"github.com/spf13/cobra"
 	"os"
@@ -10,11 +11,11 @@ import (
 )
 
 func Downtime(cmd *cobra.Command, args []string) {
+	cfg, runtime, log := clinit.Init(cmd)
 	if len(args) < 1 {
 		cmd.Help()
 		os.Exit(1)
 	}
-
 	c := cmd.Flags()
 	hostRaw, err := c.GetString("host")
 	if err != nil {
@@ -25,12 +26,10 @@ func Downtime(cmd *cobra.Command, args []string) {
 	}
 	durationRaw := args[0]
 
-	cfg, runtime := Init(cmd)
-	_ = cfg
 	ev := runtime.Node.NewEvent()
 	duration, err := time.ParseDuration(durationRaw)
 	if err != nil {
-		fmt.Printf("error parsing duration [%s]: %s. Example format: 30m, 23h20m. Only hms supported", args[1], err)
+		log.Warnf("error parsing duration [%s]: %s. Example format: 30m, 23h20m. Only hms supported", args[1], err)
 		os.Exit(1)
 	}
 
@@ -45,7 +44,7 @@ func Downtime(cmd *cobra.Command, args []string) {
 	}
 	err = ev.Marshal(&request)
 	if err != nil {
-		fmt.Printf("error marshalling request: %s\n", err)
+		log.Warnf("error marshalling request: %s\n", err)
 		os.Exit(2)
 	}
 	err = ev.Send(cfg.MQPrefix + "downtime/" + runtime.Certname)
@@ -53,5 +52,4 @@ func Downtime(cmd *cobra.Command, args []string) {
 		fmt.Printf("error sending request: %s\n", err)
 		os.Exit(2)
 	}
-
 }
