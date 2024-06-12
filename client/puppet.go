@@ -49,14 +49,14 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 			var summary puppet.LastRunSummary
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Warnf("skipping message, no fqdn header: %s", ev)
+				r.Log.Warnf("skipping message, no fqdn header: %s", util.PPEvent(&ev))
 				continue
 			} else {
 				fqdn = v
 			}
 			err := ev.Unmarshal(&summary)
 			if err != nil {
-				r.Log.Errorf("error decoding message: %s", err)
+				r.Log.Errorf("error decoding message: %s -> %s", err, util.PPEvent(&ev))
 				continue
 			}
 			statusMap[fqdn] = summary
