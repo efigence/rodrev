@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/efigence/rodrev/util"
-	"github.com/k0kubun/pp/v3"
 	"github.com/zerosvc/go-zerosvc"
 	"os"
 	"strings"
@@ -35,7 +34,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 		return fmt.Errorf("no reply-to in incoming event, aborting: %+v", ev)
 	}
 	if p.runtime.Debug {
-		p.l.Debugf("incoming event: %s", pp.Sprint(ev))
+		p.l.Debugf("incoming event: %s", util.PPEvent(ev))
 	}
 	re := p.node.NewEvent()
 	re.Headers["fqdn"] = util.GetFQDN()
