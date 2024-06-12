@@ -3,6 +3,7 @@ package puppet
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"os"
@@ -57,10 +58,12 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	case Status:
 		p.lock.RLock()
 		err := re.Marshal(p.lastRunSummary)
+		re.Headers["reply-type"] = p.lastRunSummary.RPCType()
 		p.lock.RUnlock()
 		if err != nil {
 			return err
 		}
+		re.Headers["reply-type"] = common.PuppetRunStatus
 		err = ev.Reply(re)
 		if err != nil {
 			return err
@@ -83,6 +86,7 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 				p.l.Errorf("error marshalling: %s", err)
 				return err
 			}
+			ev.Headers["reply-type"] = r.RPCType()
 			err = ev.Reply(re)
 			if err != nil {
 				return err
@@ -101,13 +105,14 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 			opts.Name: facts[opts.Name],
 		}
 		re.Marshal(&fact)
+		ev.Headers["reply-type"] = common.PuppetFact
 		err = ev.Reply(re)
 		if err != nil {
 			return err
 		}
 	default:
-		re := p.node.NewEvent()
 		re.Marshal(&Msg{Msg: "unknown command " + cmd.Command})
+		re.Headers["reply-type"] = common.Error
 		ev.Reply(re)
 		p.l.Warnf("unknown command %s [%+v] %s", cmd.Command, reqPath, ev.RoutingKey)
 

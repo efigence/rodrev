@@ -2,6 +2,7 @@ package puppet
 
 import (
 	"fmt"
+	"github.com/efigence/rodrev/common"
 	"gopkg.in/yaml.v3"
 	"io"
 )
@@ -12,6 +13,8 @@ type LastRunSummary struct {
 	Resources LastRunResources `yaml:"resources" json:"resources"`
 	Events    LastRunEvents    `yaml:"events" json:"events"`
 }
+
+func (r *LastRunSummary) RPCType() string { return common.PuppetRunSummary }
 
 type LastRunTiming struct {
 	Duration map[string]float64 `yaml:",inline" json:"duration"`

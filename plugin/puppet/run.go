@@ -2,6 +2,7 @@ package puppet
 
 import (
 	"bufio"
+	"github.com/efigence/rodrev/common"
 	"os/exec"
 	"strings"
 	"sync"
@@ -20,6 +21,8 @@ type RunStatus struct {
 	// puppet agent is applying catalog
 	Applying bool
 }
+
+func (r *RunStatus) RPCType() string { return common.PuppetRunStatus }
 
 type RunOptions struct {
 	Delay          time.Duration

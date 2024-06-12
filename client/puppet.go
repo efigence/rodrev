@@ -1,9 +1,11 @@
 package client
 
 import (
+	"encoding/json"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
 	"github.com/efigence/rodrev/util"
+	"github.com/k0kubun/pp/v3"
 	"github.com/zerosvc/go-zerosvc"
 	"time"
 )
@@ -49,7 +51,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 			var summary puppet.LastRunSummary
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Warnf("skipping message, no fqdn header: %s", util.PPEvent(&ev))
+				r.Log.Infof("skipping message, no fqdn header: %s", util.PPEvent(&ev))
 				continue
 			} else {
 				fqdn = v
@@ -131,10 +133,22 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 				r.Log.Debugf("received event: %s", util.PPEvent(&ev))
 				r.Log.Debugf("body: %s", string(ev.Body))
 			}
+			if replyType, ok := ev.Headers["reply-type"]; ok {
+				switch replyType {
+				case common.Error:
+					var m interface{}
+					json.Unmarshal(ev.Body, m)
+					r.Log.Infof("error from client %s: %s",
+						ev.NodeName(),
+						pp.Sprint(m),
+					)
+					continue
+				}
+			}
 			var fact map[string]interface{}
 			var fqdn string
 			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Warnf("skipping message, no fqdn header: %s", util.PPEvent(&ev))
+				r.Log.Infof("skipping message, no fqdn header: %s", util.PPEvent(&ev))
 				continue
 			} else {
 				fqdn = v
