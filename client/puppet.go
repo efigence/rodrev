@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
-	"github.com/k0kubun/pp/v3"
+	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"time"
 )
@@ -34,7 +34,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
 	if r.Debug {
-		r.Log.Debugf("ev: %s", pp.Sprint(query))
+		r.Log.Debugf("query ev: %s", util.PPEvent(&query))
 	}
 	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
@@ -44,7 +44,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	go func() {
 		for ev := range replyCh {
 			if r.Debug {
-				r.Log.Debugf("recv: %s", pp.Sprint(query))
+				r.Log.Debugf("reply ev: %s", util.PPEvent(&ev))
 			}
 			var summary puppet.LastRunSummary
 			var fqdn string
@@ -118,7 +118,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	query.ReplyTo = replyPath
 	r.Log.Info("sending command")
 	if r.Debug {
-		r.Log.Debugf("ev: %s", pp.Sprint(query))
+		r.Log.Debugf("ev: %s", util.PPEvent(&query))
 	}
 	err = query.Send(r.MQPrefix + "puppet")
 	if err != nil {
@@ -128,7 +128,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	go func() {
 		for ev := range replyCh {
 			if r.Debug {
-				r.Log.Debugf("received event: %s", pp.Sprint(ev))
+				r.Log.Debugf("received event: %s", util.PPEvent(&ev))
 				r.Log.Debugf("body: %s", string(ev.Body))
 			}
 			var fact map[string]interface{}
