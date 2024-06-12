@@ -11,6 +11,5 @@ func PPEvent(ev *zerosvc.Event) string {
 		ev.RoutingKey,
 		pp.Sprint(ev.Headers),
 		ev.ReplyTo,
-		string(ev.Body),
-
+		string(ev.Body))
 }
