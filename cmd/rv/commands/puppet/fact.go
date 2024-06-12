@@ -1,6 +1,7 @@
 package puppet
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"github.com/efigence/rodrev/client"
 	"github.com/efigence/rodrev/cmd/rv/clinit"
@@ -24,22 +25,21 @@ func Fact(cmd *cobra.Command, args []string) {
 	case clinit.OutStderr:
 		log.Info("puppet status")
 		log.Info(pp.Sprint(status))
-	//case clinit.OutCsv:
-	//	csvW := csv.NewWriter(os.Stdout)
-	//	csvW.Write([]string{
-	//		"fqdn",
-	//		"fact",
-	//	})
-	//	for node, summary := range status {
-	//		totalDuration := "0"
-	//		if v, ok := summary.Timing.Duration["total"]; ok {
-	//			totalDuration = strconv.FormatFloat(v, 'f', 2, 64)
-	//		}
-	//		csvW.Write([]string{
-	//			node,
-	//		})
-	//	}
-	//	csvW.Flush()
+	case clinit.OutCsv:
+		csvW := csv.NewWriter(os.Stdout)
+		csvW.Write([]string{
+			"node",
+			"fact",
+			"value",
+		})
+		for node, st := range status {
+			csvW.Write([]string{
+				node,
+				args[0],
+				pp.Sprint(st),
+			})
+		}
+		csvW.Flush()
 	case clinit.OutJson:
 		err := json.NewEncoder(os.Stdout).Encode(&status)
 		if err != nil {
