@@ -1,6 +1,7 @@
 package puppet
 
 import (
+	"encoding/json"
 	"github.com/efigence/rodrev/client"
 	"github.com/efigence/rodrev/cmd/rv/clinit"
 	"github.com/efigence/rodrev/util"
@@ -39,11 +40,11 @@ func Fact(cmd *cobra.Command, args []string) {
 	//		})
 	//	}
 	//	csvW.Flush()
-	//case clinit.OutJson:
-	//	err := json.NewEncoder(os.Stdout).Encode(&status)
-	//	if err != nil {
-	//		log.Errorf("error encoding node data: %s", err)
-	//	}
+	case clinit.OutJson:
+		err := json.NewEncoder(os.Stdout).Encode(&status)
+		if err != nil {
+			log.Errorf("error encoding node data: %s", err)
+		}
 	default:
 		log.Info("unsupported output[%s]", util.StringOrPanic(c.GetString("output-format")))
 		pp.Print(status)
