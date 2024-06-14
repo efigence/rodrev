@@ -46,7 +46,7 @@ func Fact(cmd *cobra.Command, args []string) {
 			log.Errorf("error encoding node data: %s", err)
 		}
 	default:
-		log.Info("unsupported output[%s]", util.StringOrPanic(c.GetString("output-format")))
+		log.Infof("unsupported output[%s]", util.StringOrPanic(c.GetString("output-format")))
 		pp.Print(status)
 		os.Exit(1)
 	}
