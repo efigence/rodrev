@@ -1,6 +1,7 @@
 package puppet
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
@@ -46,6 +47,8 @@ func (f *Facts) UpdateFacts() error {
 	// in case we get empty YAML do not update
 	if len(facts) > 0 {
 		f.facts = &facts
+	} else {
+		return fmt.Errorf("got empty fact YAML after decode")
 	}
 	return nil
 }
