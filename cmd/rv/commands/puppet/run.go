@@ -14,6 +14,7 @@ func Run(cmd *cobra.Command) {
 	c := cmd.Flags()
 	_ = cfg
 	target := util.StringOrPanic(c.GetString("node"))
+	noop := util.BoolOrPanic(c.GetBool("noop"))
 	if len(target) == 0 {
 		target = util.StringOrPanic(c.GetString("target"))
 	}
@@ -36,6 +37,6 @@ func Run(cmd *cobra.Command) {
 	if len(filter) > 0 {
 		log.Warnf("filter query: %s", filter)
 	}
-	client.PuppetRun(&runtime, target, filter, randomDelay)
+	client.PuppetRun(&runtime, target, filter, randomDelay, client.Opts{Noop: noop})
 	log.Warnf("sending  puppet run request to %s", util.StringOrPanic(c.GetString("node")))
 }
