@@ -197,6 +197,11 @@ func cobraInitFlags() {
 		0,
 		"add random delay to each run. Use when running many at once",
 	)
+	puppetCmd.PersistentFlags().Bool(
+		"noop",
+		false,
+		"run puppet with  --noop",
+	)
 
 	downtimeCmd.PersistentFlags().String(
 		"host",

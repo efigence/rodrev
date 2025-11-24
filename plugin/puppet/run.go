@@ -27,6 +27,7 @@ func (r *RunStatus) RPCType() string { return common.PuppetRunStatus }
 type RunOptions struct {
 	Delay          time.Duration
 	RandomizeDelay bool
+	Noop           bool
 }
 type FactOptions struct {
 	Name string
@@ -66,7 +67,11 @@ func (p *Puppet) run(opt RunOptions) {
 		time.Sleep(opt.Delay)
 	}
 	p.l.Info("running puppet")
-	cmd := exec.Command(p.puppetPath, "agent", "--onetime", "--no-daemonize", "--verbose", "--no-splay", "--color=false")
+	args := []string{"agent", "--onetime", "--no-daemonize", "--verbose", "--no-splay", "--color=false"}
+	if opt.Noop {
+		args = append(args, "--noop")
+	}
+	cmd := exec.Command(p.puppetPath, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		p.l.Errorf("error attaching stdin: %s", err)

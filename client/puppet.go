@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+type Opts struct {
+	Noop bool
+}
+
 func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRunSummary {
 	statusMap := make(map[string]puppet.LastRunSummary, 0)
 	replyPath, replyCh, err := r.GetReplyChan()
@@ -68,7 +72,7 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	return statusMap
 }
 
-func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duration) chan zerosvc.Event {
+func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duration, opts Opts) chan zerosvc.Event {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
@@ -78,7 +82,7 @@ func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duratio
 	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
 		Command:    puppet.Run,
 		Filter:     filter,
-		Parameters: puppet.RunOptions{Delay: delay, RandomizeDelay: true},
+		Parameters: puppet.RunOptions{Delay: delay, RandomizeDelay: true, Noop: opts.Noop},
 	}))
 
 	query.ReplyTo = replyPath
