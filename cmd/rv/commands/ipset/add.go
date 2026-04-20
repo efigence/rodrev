@@ -13,7 +13,7 @@ func Add(cmd *cobra.Command, args []string) {
 	}
 	_, runtime, log := clinit.Init(cmd)
 	log.Infof("adding [%s] to ipset [%s]", args[2], args[1])
-	err := ipset.Add(&runtime, args[0], args[1], args[2])
+	err := ipset.Cmd(&runtime, ipset.IPSET_ADD, args[0], args[1], args[2])
 	if err != nil {
 		log.Infof("ipset failed: %s", err)
 	}

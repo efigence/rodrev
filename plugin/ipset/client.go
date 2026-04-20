@@ -5,7 +5,7 @@ import (
 	"github.com/efigence/rodrev/common"
 )
 
-func Add(r *common.Runtime, group string, ipset string, addr string) error {
+func Cmd(r *common.Runtime, command Command, group string, ipset string, addr string) error {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		return fmt.Errorf("error getting reply channel: %s", err)
@@ -13,6 +13,7 @@ func Add(r *common.Runtime, group string, ipset string, addr string) error {
 	defer close(replyCh)
 	cmd := r.Node.NewEvent()
 	cmd.Marshal(IPsetCmd{
+		Cmd:   command,
 		Addr:  addr,
 		IPSet: ipset,
 	})

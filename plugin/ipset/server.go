@@ -64,7 +64,12 @@ func (i *IPSetManager) EventListener(evCh chan zerosvc.Event, setname string) er
 			l.Errorf("error decoding command: %s", err)
 		}
 		if set, ok := i.sets[cmd.IPSet]; ok {
-			err := set.Add(cmd.Addr)
+			var err error
+			if cmd.Cmd == IPSET_DEL {
+				err = set.Delete(cmd.Addr)
+			} else { // old clients don't fill Cmd field
+				err = set.Add(cmd.Addr)
+			}
 			if err != nil {
 				l.Errorf("error adding to set[%s]: %s", cmd.IPSet, err)
 			}
