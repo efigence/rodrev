@@ -73,7 +73,7 @@ func (i *IPSetManager) EventListener(evCh chan zerosvc.Event, setname string) er
 			if err != nil {
 				l.Errorf("error adding to set[%s]: %s", cmd.IPSet, err)
 			}
-			l.Infof("adding %s to set %s", cmd.IPSet, cmd.Addr)
+			l.Infof("%s %s to set %s", cmd.Cmd, cmd.IPSet, cmd.Addr)
 			// No reply, this should be audited
 			//re := i.runtime.Node.NewEvent()
 			//err = ev.Reply(re)
