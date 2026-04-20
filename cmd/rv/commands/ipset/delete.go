@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Add(cmd *cobra.Command, args []string) {
+func Delete(cmd *cobra.Command, args []string) {
 	if len(args) < 3 {
 		cmd.Help()
 		return

@@ -128,6 +128,11 @@ var ipsetAddCmd = &cobra.Command{
 	Short: "add address to ipset group",
 	Run:   ipset.Add,
 }
+var ipsetDeleteCmd = &cobra.Command{
+	Use:   "delete <group> <ipset> <addr>",
+	Short: "delete address from ipset group",
+	Run:   ipset.Delete,
+}
 
 func cobraDefaultString(env string, defaultValue string) string {
 	e := os.Getenv(env)
@@ -223,5 +228,6 @@ func cobraInitCommands() {
 	fenceCmd.AddCommand(fenceStatusCmd)
 	rootCmd.AddCommand(fenceCmd)
 	ipsetCmd.AddCommand(ipsetAddCmd)
+	ipsetCmd.AddCommand(ipsetDeleteCmd)
 	rootCmd.AddCommand(ipsetCmd)
 }
