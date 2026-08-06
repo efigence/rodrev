@@ -64,9 +64,10 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 	host, _ := os.Hostname()
 	nodename := "rf-client-" + host
 	node := zerosvc.NewNode(nodename, uuid.NewV4().String())
+	log.Debugf("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
 	err = tr.Connect()
 	if err != nil {
-		log.Panicf("can't connect: %s", err)
+		log.Panicf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
 	}
 	node.SetTransport(tr)
 	certname := ""

@@ -28,6 +28,19 @@ func DurationOrPanic(d time.Duration, err error) time.Duration {
 	return d
 }
 
+// RedactURL returns URL with password replaced by a placeholder, safe to log.
+// Unparseable URLs are redacted as a whole so a malformed one can't leak the password
+func RedactURL(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return "[unparseable url]"
+	}
+	return u.Redacted()
+}
+
 // MergeCliConfig merges(overrides mostly) cli and file config values
 func MergeCliConfig(cfg *config.Config, cmd *cobra.Command) {
 	c := cmd.Flags()

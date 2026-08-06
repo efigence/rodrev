@@ -53,7 +53,9 @@ var rootCmd = &cobra.Command{
 			exit <- 1
 		}
 		common.MergeCliConfig(&cfg, cmd)
-		log.Warnf("%+v", cfg)
+		cfgLog := cfg
+		cfgLog.MQAddress = common.RedactURL(cfg.MQAddress)
+		log.Warnf("%+v", cfgLog)
 
 		debug = common.BoolOrPanic(c.GetBool("debug"))
 
@@ -61,7 +63,7 @@ var rootCmd = &cobra.Command{
 		setupLogger()
 		cfg.Logger = log
 		cfg.Version = version
-		log.Debugf("MQ server url %s", cfg.MQAddress)
+		log.Infof("MQ server url %s", common.RedactURL(cfg.MQAddress))
 		hup := make(chan os.Signal, 1)
 		signal.Notify(hup, syscall.SIGHUP)
 

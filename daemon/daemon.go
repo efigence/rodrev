@@ -55,9 +55,10 @@ func New(cfg config.Config) (*Daemon, error) {
 		Description: "puppet management",
 		Defaults:    nil,
 	}
+	d.l.Infof("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
 	err := tr.Connect()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
 	}
 	d.node.SetTransport(tr)
 
