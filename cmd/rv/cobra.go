@@ -117,7 +117,7 @@ var fenceStatusCmd = &cobra.Command{
 }
 var ipsetCmd = &cobra.Command{
 	Use:   "ipset",
-	Short: "fencing commands",
+	Short: "ipset control",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
