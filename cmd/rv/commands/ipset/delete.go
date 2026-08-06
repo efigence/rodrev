@@ -12,7 +12,7 @@ func Delete(cmd *cobra.Command, args []string) {
 		return
 	}
 	_, runtime, log := clinit.Init(cmd)
-	log.Infof("adding [%s] to ipset [%s]", args[2], args[1])
+	log.Infof("deleting [%s] from ipset [%s]", args[2], args[1])
 	err := ipset.Cmd(&runtime, ipset.IPSET_DEL, args[0], args[1], args[2])
 	if err != nil {
 		log.Infof("ipset failed: %s", err)
