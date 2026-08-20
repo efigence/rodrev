@@ -38,7 +38,12 @@ func NewClusterBackend(r *common.Runtime, log *zap.SugaredLogger) *ClusterBacken
 				b.log.Debugf("background discovery panicked: %s", err)
 			}
 		}()
-		if _, err := b.discover(); err != nil {
+		// retained heartbeats land within milliseconds of subscribing, so the
+		// node list does not need the conservative default windows
+		if _, err := b.discover(client.DiscoverOpts{
+			InitialWait: time.Second * 2,
+			IdleWait:    time.Millisecond * 400,
+		}); err != nil {
 			b.log.Debugf("background discovery failed: %s", err)
 		}
 	}()
@@ -51,7 +56,11 @@ func (b *ClusterBackend) Describe() string {
 
 func (b *ClusterBackend) Eval(ctx context.Context, expr string, sink func(NodeResult)) (Summary, error) {
 	start := time.Now()
-	matched := client.PuppetStatus(b.r, expr)
+	matched, err := client.PuppetFilterMatch(ctx, b.r, expr, func(fqdn string) {
+		if sink != nil {
+			sink(NodeResult{FQDN: fqdn, Matched: true, RTT: time.Since(start)})
+		}
+	})
 	sum := Summary{
 		Expr:      expr,
 		Matched:   len(matched),
@@ -62,50 +71,47 @@ func (b *ClusterBackend) Eval(ctx context.Context, expr string, sink func(NodeRe
 		// indistinguishable from one that is down
 		Silent: true,
 	}
-	fqdns := make([]string, 0, len(matched))
-	for fqdn := range matched {
-		fqdns = append(fqdns, fqdn)
-	}
-	sort.Strings(fqdns)
-	for _, fqdn := range fqdns {
-		if sink != nil {
-			sink(NodeResult{FQDN: fqdn, Matched: true})
-		}
+	if err != nil {
+		return sum, err
 	}
 	return sum, nil
 }
 
 func (b *ClusterBackend) Nodes(ctx context.Context, refresh bool) ([]string, error) {
-	if cached := b.Cached(); len(cached) > 0 && !refresh {
-		return cached, nil
-	}
 	if !refresh {
-		// discovery is slow, let the background one finish instead of blocking
+		// discovery takes seconds, serve whatever the background run found
 		return b.Cached(), nil
 	}
-	return b.discover()
+	return b.discover(client.DefaultDiscoverOpts)
 }
 
-func (b *ClusterBackend) discover() ([]string, error) {
-	_, active, stale, err := client.Discover(b.r)
+// discover runs one discovery pass and caches the result. Heartbeats are
+// retained, so a short window is enough to see the whole fleet
+func (b *ClusterBackend) discover(o client.DiscoverOpts) ([]string, error) {
+	d, err := client.DiscoverOnce(b.r, o)
 	if err != nil {
 		return nil, err
 	}
-	nodes := make([]string, 0, len(active))
-	for fqdn := range active {
-		nodes = append(nodes, fqdn)
+	nodes := d.ActiveNodes()
+	stale := make([]string, 0, len(d.Stale))
+	for fqdn := range d.Stale {
+		stale = append(stale, fqdn)
 	}
-	staleNodes := make([]string, 0, len(stale))
-	for fqdn := range stale {
-		staleNodes = append(staleNodes, fqdn)
-	}
-	sort.Strings(nodes)
-	sort.Strings(staleNodes)
+	sort.Strings(stale)
 	b.l.Lock()
 	b.nodes = nodes
-	b.stale = staleNodes
+	b.stale = stale
 	b.l.Unlock()
 	return nodes, nil
+}
+
+// Stale returns nodes whose heartbeat has expired
+func (b *ClusterBackend) Stale() []string {
+	b.l.Lock()
+	defer b.l.Unlock()
+	out := make([]string, len(b.stale))
+	copy(out, b.stale)
+	return out
 }
 
 // Cached returns nodes discovered so far

@@ -22,7 +22,13 @@ const (
 	FormatJSON  = "json"
 )
 
-const DefaultTimeout = time.Second * 3
+// DefaultTimeout matches how long PuppetStatus has always waited for replies,
+// so a query does not report fewer nodes than `rv puppet --filter ... status`
+const DefaultTimeout = time.Second * 4
+
+// streamLimit is how many matching nodes are listed as they arrive. A query on a
+// few hundred nodes should not bury the summary line
+const streamLimit = 20
 
 type Config struct {
 	// Backend evaluates the queries. Required
@@ -64,6 +70,10 @@ type Session struct {
 	// stream prints node results as they arrive. Pointless for a backend that
 	// only ever has one node to report on
 	stream bool
+	// streamed/suppressed count what the current query printed, to keep a
+	// fleet-wide match from scrolling the summary off the screen
+	streamed   int
+	suppressed int
 	// hintedNoData makes the "no fact data loaded" hint show up once per session
 	hintedNoData bool
 	csvHeader    map[string]bool
@@ -165,6 +175,7 @@ func (s *Session) runQuery(expr string) error {
 	}
 	ctx, cancel := s.evalContext()
 	defer cancel()
+	s.streamed, s.suppressed = 0, 0
 	results := make([]NodeResult, 0, len(s.nodes)+1)
 	sink := func(r NodeResult) {
 		results = append(results, r)
@@ -173,8 +184,11 @@ func (s *Session) runQuery(expr string) error {
 	sum, err := s.backend.Eval(ctx, expr, sink)
 	if err != nil {
 		s.failed++
-		s.errorf("%s", err)
-		return nil
+		s.errorf("%s%s", err, connectionHint(err))
+		if sum.Responded == 0 {
+			return nil
+		}
+		// a query that failed part way through still has results worth showing
 	}
 	if sum.Matched > 0 {
 		s.matched++
@@ -188,6 +202,18 @@ func (s *Session) runQuery(expr string) error {
 		s.failed++
 	}
 	return s.printQuery(sum, results)
+}
+
+// connectionHint explains what to do about a lost MQ connection: the client
+// reconnects on its own, but subscriptions made while it is down just fail
+func connectionHint(err error) string {
+	msg := err.Error()
+	for _, marker := range []string{"not currently connected", "subscription failed", "connection to"} {
+		if strings.Contains(msg, marker) {
+			return "\n       the MQ client reconnects in the background, retry in a moment"
+		}
+	}
+	return ""
 }
 
 // evalContext bounds a query by the session timeout, and by Ctrl-C when

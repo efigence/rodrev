@@ -3,6 +3,8 @@ package repl
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -41,8 +43,10 @@ type fakeBackend struct {
 	results []NodeResult
 	known   int
 	delay   time.Duration
-	err     error
-	silent  bool
+	// err fails the query outright, errAfter fails it after reporting results
+	err      error
+	errAfter error
+	silent   bool
 }
 
 func (f *fakeBackend) Describe() string { return "fake cluster" }
@@ -63,7 +67,7 @@ func (f *fakeBackend) Eval(ctx context.Context, expr string, sink func(NodeResul
 			sink(r)
 		}
 	}
-	return sum, nil
+	return sum, f.errAfter
 }
 func (f *fakeBackend) Nodes(ctx context.Context, refresh bool) ([]string, error) {
 	out := make([]string, 0, len(f.results))
@@ -207,6 +211,63 @@ func TestDataSourceNote(t *testing.T) {
 	local, out2 := testSession(t, FormatHuman)
 	require.NoError(t, local.EvalLine(":fact virtual"))
 	assert.Equal(t, "virtual: kvm\n", out2.String())
+}
+
+// a failed query must not read as "nothing matched"
+func TestQueryErrorReporting(t *testing.T) {
+	t.Run("failure with no results", func(t *testing.T) {
+		var out bytes.Buffer
+		s, err := New(Config{
+			Backend: &fakeBackend{err: errors.New("can't subscribe for replies: not currently connected")},
+			Out:     &out,
+		})
+		require.NoError(t, err)
+		require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+		assert.Contains(t, out.String(), "error: can't subscribe for replies")
+		assert.Contains(t, out.String(), "reconnects in the background")
+		assert.NotContains(t, out.String(), "matched")
+		assert.Equal(t, 2, s.ExitCode())
+	})
+	t.Run("partial results are still shown", func(t *testing.T) {
+		var out bytes.Buffer
+		s, err := New(Config{
+			Backend: &fakeBackend{
+				known:    12,
+				results:  []NodeResult{{FQDN: "d1.example.com", Matched: true}},
+				errAfter: errors.New("connection to tcp://mq lost while waiting for replies"),
+				silent:   true,
+			},
+			Out: &out,
+		})
+		require.NoError(t, err)
+		require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+		assert.Contains(t, out.String(), "+ d1.example.com")
+		assert.Contains(t, out.String(), "error: connection to tcp://mq lost")
+		assert.Contains(t, out.String(), "1/12 matched")
+		assert.Equal(t, 2, s.ExitCode())
+	})
+}
+
+// a fleet-wide match must not scroll the summary off the screen
+func TestStreamLimit(t *testing.T) {
+	results := make([]NodeResult, 0, 50)
+	for i := 0; i < 50; i++ {
+		results = append(results, NodeResult{FQDN: fmt.Sprintf("d%02d.example.com", i), Matched: true})
+	}
+	var out bytes.Buffer
+	s, err := New(Config{Backend: &fakeBackend{known: 50, results: results, silent: true}, Out: &out})
+	require.NoError(t, err)
+	require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+	got := out.String()
+	assert.Equal(t, streamLimit, strings.Count(got, "  + d"))
+	assert.Contains(t, got, fmt.Sprintf("... %d more not listed", 50-streamLimit))
+	assert.Contains(t, got, "50/50 matched")
+
+	// :verbose lists everything
+	out.Reset()
+	require.NoError(t, s.EvalLine(":verbose"))
+	require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+	assert.Equal(t, 50, strings.Count(out.String(), "  + d"))
 }
 
 func TestClusterShapedOutput(t *testing.T) {
