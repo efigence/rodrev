@@ -54,6 +54,27 @@ There is few added functions and global variables:
 
 * `rv --out=csv puppet --filter '(== (class "systemd::common") true)'  status` - list puppet nodes containing that class
 
+### Testing queries
+
+`t-data/` holds an example node state (`facts.yaml`, `classes.txt`, `last_run_summary.yaml`)
+and `puppet.QueryHarness` loads it into a query engine wired up the same way daemon does,
+so CLI filter expressions can be checked without a running cluster:
+
+```go
+h, err := puppet.NewQueryHarness("../../t-data", nil)  // nil == generate `node` metadata out of facts
+match, err := h.Query(`(== (class "systemd::common") true)`)
+```
+
+To check a new query just add a line to `queryTests` in `plugin/puppet/query-harness_test.go`:
+
+```go
+{query: `(== (fact "os" "distro" "codename") "bookworm")`, want: true},
+{query: `(fact "os")`, wantErr: true}, // hash is not a boolean
+```
+
+and run `go test ./plugin/puppet/ -run TestQueryHarness -v`. Point the harness at your own
+directory with the same three file names to test against another node's data.
+
 
 
 ## Feature list

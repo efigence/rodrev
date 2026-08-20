@@ -44,7 +44,7 @@ var DefaultConfig = Config{
 
 type Puppet struct {
 	node           *zerosvc.Node
-	facts          Facts
+	facts          *Facts
 	classes        *Classes
 	lastRunSummary LastRunSummary
 	runStatus      RunStatus
@@ -103,15 +103,14 @@ func New(cfg Config) (*Puppet, error) {
 	if err != nil {
 		p.l.Errorf("error loading classes: %s", err)
 	}
-	err = cfg.Query.RegisterMap("fact", &p.facts)
+	err = cfg.Query.RegisterMap("fact", p.facts)
 	if err != nil {
-		p.l.Errorf("error registering facts in query engine: %s")
+		p.l.Errorf("error registering facts in query engine: %s", err)
 	}
 	err = cfg.Query.RegisterMap("class", p.classes)
 	if err != nil {
-		p.l.Errorf("error registering classes in query engine: %s")
+		p.l.Errorf("error registering classes in query engine: %s", err)
 	}
-	fmt.Sprintf("%+v", p.classes.Map())
 
 	if len(p.puppetPath) == 0 {
 		return nil, fmt.Errorf("can't find puppet in PATH or in /usr/local/bin")
