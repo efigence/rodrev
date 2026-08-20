@@ -13,6 +13,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// waitForFirstHeartbeat is how long to give retained heartbeats to arrive before
+// reporting an empty fleet
+const waitForFirstHeartbeat = time.Second
+
 // ClusterBackend evaluates a query on every node by sending it as the filter of
 // a status request. Nodes that do not match stay silent, so only the matched
 // count is exact - the fleet size comes from heartbeat discovery
@@ -21,15 +25,9 @@ type ClusterBackend struct {
 	log *zap.SugaredLogger
 	// session carries every query of this REPL over one reply subscription
 	session *client.Session
+	// watcher follows the heartbeat stream for as long as the session lives
+	watcher *client.NodeWatcher
 	l       sync.Mutex
-	// nodes is the discovery cache, filled in in the background so the first
-	// prompt does not have to wait for it
-	nodes []string
-	stale []string
-	// queryCapable is set when every active node runs a daemon that answers the
-	// query command, which is what makes exact counts possible
-	queryCapable      bool
-	queryCapableCount int
 }
 
 func NewClusterBackend(r *common.Runtime, log *zap.SugaredLogger) (*ClusterBackend, error) {
@@ -37,26 +35,14 @@ func NewClusterBackend(r *common.Runtime, log *zap.SugaredLogger) (*ClusterBacke
 	if err != nil {
 		return nil, err
 	}
-	b := ClusterBackend{r: r, log: log, session: session}
-	// discovery takes ~14s (it waits for heartbeats), so it runs in the
-	// background and the node list fills in whenever it is done
-	go func() {
-		// discovery is best effort: whatever goes wrong in there must not take
-		// the REPL down with it
-		defer func() {
-			if err := recover(); err != nil {
-				b.log.Debugf("background discovery panicked: %s", err)
-			}
-		}()
-		// retained heartbeats land within milliseconds of subscribing, so the
-		// node list does not need the conservative default windows
-		if _, err := b.discover(client.DiscoverOpts{
-			InitialWait: time.Second * 2,
-			IdleWait:    time.Millisecond * 400,
-		}); err != nil {
-			b.log.Debugf("background discovery failed: %s", err)
-		}
-	}()
+	// retained heartbeats arrive the moment the subscription is made and only
+	// then, so the fleet view is followed instead of being polled
+	watcher, err := client.WatchNodes(r)
+	if err != nil {
+		_ = session.Close()
+		return nil, err
+	}
+	b := ClusterBackend{r: r, log: log, session: session, watcher: watcher}
 	return &b, nil
 }
 
@@ -125,73 +111,53 @@ func (b *ClusterBackend) evalFilter(ctx context.Context, expr string, sink func(
 // mixed fleet stays on the fallback: an old daemon answers a query command with
 // "unknown command", which would show up as a per-node error
 func (b *ClusterBackend) QueryCapable() bool {
-	b.l.Lock()
-	defer b.l.Unlock()
-	return b.queryCapable
+	d := b.watcher.Discovery()
+	return len(d.Active) > 0 && len(d.WithFeature(puppet.Query)) == len(d.Active)
 }
 
 // Capabilities describes what the fleet supports, for :nodes
 func (b *ClusterBackend) Capabilities() string {
-	b.l.Lock()
-	defer b.l.Unlock()
-	if len(b.nodes) == 0 {
+	d := b.watcher.Discovery()
+	if len(d.Active) == 0 {
 		return ""
 	}
-	if b.queryCapable {
-		return fmt.Sprintf("all %d nodes report matches exactly", len(b.nodes))
+	capable := len(d.WithFeature(puppet.Query))
+	if capable == len(d.Active) {
+		return fmt.Sprintf("all %d nodes report matches exactly", len(d.Active))
 	}
 	return fmt.Sprintf("%d of %d nodes support exact match reporting; "+
 		"until the rest are upgraded, nodes that do not match stay silent",
-		b.queryCapableCount, len(b.nodes))
+		capable, len(d.Active))
 }
 
+// Nodes returns the fleet as the heartbeat stream currently has it. The view is
+// live, so a refresh has nothing to do beyond giving the first heartbeats a
+// moment to land when the session has only just started
 func (b *ClusterBackend) Nodes(ctx context.Context, refresh bool) ([]string, error) {
-	if !refresh {
-		// discovery takes seconds, serve whatever the background run found
-		return b.Cached(), nil
+	if nodes := b.Cached(); len(nodes) > 0 {
+		return nodes, nil
 	}
-	return b.discover(client.DefaultDiscoverOpts)
+	waitCtx, cancel := context.WithTimeout(ctx, waitForFirstHeartbeat)
+	defer cancel()
+	b.watcher.WaitForNodes(waitCtx)
+	return b.Cached(), nil
 }
 
-// discover runs one discovery pass and caches the result. Heartbeats are
-// retained, so a short window is enough to see the whole fleet
-func (b *ClusterBackend) discover(o client.DiscoverOpts) ([]string, error) {
-	d, err := client.DiscoverOnce(b.r, o)
-	if err != nil {
-		return nil, err
-	}
-	nodes := d.ActiveNodes()
-	stale := make([]string, 0, len(d.Stale))
-	for fqdn := range d.Stale {
-		stale = append(stale, fqdn)
-	}
-	sort.Strings(stale)
-	capable := d.WithFeature(puppet.Query)
-	b.l.Lock()
-	b.nodes = nodes
-	b.stale = stale
-	b.queryCapableCount = len(capable)
-	b.queryCapable = len(nodes) > 0 && len(capable) == len(nodes)
-	b.l.Unlock()
-	return nodes, nil
-}
-
-// Stale returns nodes whose heartbeat has expired
+// Stale returns nodes whose heartbeat went quiet
 func (b *ClusterBackend) Stale() []string {
-	b.l.Lock()
-	defer b.l.Unlock()
-	out := make([]string, len(b.stale))
-	copy(out, b.stale)
+	d := b.watcher.Discovery()
+	out := make([]string, 0, len(d.Stale))
+	for fqdn := range d.Stale {
+		out = append(out, fqdn)
+	}
+	sort.Strings(out)
 	return out
 }
 
-// Cached returns nodes discovered so far
+// Cached returns the nodes seen so far
 func (b *ClusterBackend) Cached() []string {
-	b.l.Lock()
-	defer b.l.Unlock()
-	out := make([]string, len(b.nodes))
-	copy(out, b.nodes)
-	return out
+	d := b.watcher.Discovery()
+	return d.ActiveNodes()
 }
 
 func (b *ClusterBackend) Snapshot(ctx context.Context, fqdn string) (*puppet.Snapshot, error) {

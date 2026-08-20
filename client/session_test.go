@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/plugin/puppet"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zerosvc/go-zerosvc"
@@ -18,14 +18,16 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-// loopback is an in-process zerosvc transport: events sent to it are delivered
-// to whatever subscribed to a matching filter, so RPC plumbing can be tested
-// without a broker
+// loopback is an in-process zerosvc transport: events published to it are
+// delivered to whatever subscribed to a matching topic, so RPC plumbing can be
+// tested without a broker
 type loopback struct {
-	l    sync.Mutex
-	subs map[string]chan zerosvc.Event
-	sent []sentEvent
-	// onSend plays the daemon side: it is called for every event the client
+	l         sync.Mutex
+	subs      map[string]chan *zerosvc.Message
+	published []sentEvent
+	// node is needed to serialize and deserialize events, set once it exists
+	node *zerosvc.Node
+	// onSend plays the daemon side: it is called for every request the client
 	// sends, in its own goroutine
 	onSend  func(t *loopback, path string, ev zerosvc.Event)
 	sendErr error
@@ -37,56 +39,66 @@ type sentEvent struct {
 }
 
 func newLoopback() *loopback {
-	return &loopback{subs: make(map[string]chan zerosvc.Event, 4)}
+	return &loopback{subs: make(map[string]chan *zerosvc.Message, 4)}
 }
 
-func (t *loopback) Connect() error             { return nil }
-func (t *loopback) Shutdown()                  {}
-func (t *loopback) AdminCleanup()              {}
-func (t *loopback) SetupHeartbeat(path string) {}
+func (t *loopback) Connect(h zerosvc.Hooks, willPath string) error { return nil }
 
-func (t *loopback) GetEvents(filter string, ch chan zerosvc.Event) error {
+func (t *loopback) Subscribe(topic string, data chan *zerosvc.Message) error {
 	t.l.Lock()
 	defer t.l.Unlock()
-	t.subs[filter] = ch
+	t.subs[topic] = data
 	return nil
 }
 
-func (t *loopback) SendEvent(path string, ev zerosvc.Event) error {
+func (t *loopback) HeartbeatMessage(m zerosvc.Message) error { return nil }
+
+func (t *loopback) Publish(m zerosvc.Message) error {
 	if t.sendErr != nil {
 		return t.sendErr
 	}
 	t.l.Lock()
-	t.sent = append(t.sent, sentEvent{Path: path, Ev: ev})
+	node := t.node
 	onSend := t.onSend
 	t.l.Unlock()
+	// a reply is just another publish, only requests get handed to the daemon side
+	isReply := strings.Contains(m.Topic, "/reply/")
+	var ev zerosvc.Event
+	if node != nil && len(m.Payload) > 0 {
+		if decoded, err := (&zerosvc.Event{}).Deserialize(m.Payload, node); err == nil {
+			ev = *decoded
+			ev.RoutingKey = m.Topic
+		}
+	}
+	if isReply {
+		return t.deliver(m)
+	}
+	t.l.Lock()
+	t.published = append(t.published, sentEvent{Path: m.Topic, Ev: ev})
+	t.l.Unlock()
 	if onSend != nil {
-		go onSend(t, path, ev)
+		go onSend(t, m.Topic, ev)
 	}
 	return nil
 }
 
-func (t *loopback) SendReply(path string, ev zerosvc.Event) error {
-	return t.deliver(path, ev)
-}
-
-// deliver routes an event to subscribers, handling the trailing # the way MQTT
+// deliver routes a message to subscribers, handling the trailing # the way MQTT
 // does (it matches the parent level too)
-func (t *loopback) deliver(topic string, ev zerosvc.Event) error {
-	ev.RoutingKey = topic
+func (t *loopback) deliver(m zerosvc.Message) error {
 	t.l.Lock()
 	defer t.l.Unlock()
 	for filter, ch := range t.subs {
 		prefix := strings.TrimSuffix(strings.TrimSuffix(filter, "#"), "/")
 		if !strings.HasSuffix(filter, "#") {
-			if filter != topic {
+			if filter != m.Topic {
 				continue
 			}
-		} else if topic != prefix && !strings.HasPrefix(topic, prefix+"/") {
+		} else if m.Topic != prefix && !strings.HasPrefix(m.Topic, prefix+"/") {
 			continue
 		}
+		msg := m
 		select {
-		case ch <- ev:
+		case ch <- &msg:
 		case <-time.After(time.Second):
 			return nil
 		}
@@ -96,29 +108,60 @@ func (t *loopback) deliver(topic string, ev zerosvc.Event) error {
 
 // reply plays a node answering a request, the way plugin/puppet does
 func (t *loopback) reply(req zerosvc.Event, fqdn string, replyType string, body interface{}) {
-	ev := zerosvc.NewEvent()
-	raw, _ := json.Marshal(body)
-	ev.Body = raw
-	ev.Headers["fqdn"] = fqdn
-	ev.Headers["node-name"] = fqdn
-	ev.Headers["reply-type"] = replyType
+	t.l.Lock()
+	node := t.node
+	t.l.Unlock()
+	reply := node.PrepareReply(req)
+	reply.NodeName = fqdn
+	reply.Headers["fqdn"] = fqdn
+	reply.Headers["reply-type"] = replyType
 	if id, ok := req.Headers["correlation-id"]; ok {
-		ev.Headers["correlation-id"] = id
+		reply.Headers["correlation-id"] = id
 	}
-	_ = t.deliver(req.ReplyTo, ev)
+	if err := reply.Marshal(body); err != nil {
+		return
+	}
+	payload, err := reply.Serialize()
+	if err != nil {
+		return
+	}
+	_ = t.deliver(zerosvc.Message{Topic: node2root + "/" + req.ReplyTo, Payload: payload})
 }
+
+func (t *loopback) sent() []sentEvent {
+	t.l.Lock()
+	defer t.l.Unlock()
+	out := make([]sentEvent, len(t.published))
+	copy(out, t.published)
+	return out
+}
+
+// node2root is the event root the test nodes use
+const node2root = "rv"
 
 func testSessionRuntime(t *testing.T) (*common.Runtime, *loopback, *observer.ObservedLogs) {
 	t.Helper()
 	tr := newLoopback()
-	node := zerosvc.NewNode("rf-client-test", "test-uuid")
-	node.SetTransport(tr)
 	core, logs := observer.New(zap.DebugLevel)
+	log := zap.New(core).Sugar()
+	node, err := zerosvc.NewNode(zerosvc.Config{
+		NodeName:          "rf-client-test",
+		NodeUUID:          "test-uuid",
+		Transport:         tr,
+		EventRoot:         node2root,
+		HeartbeatInterval: time.Hour,
+		Logger:            log,
+	})
+	require.NoError(t, err)
+	tr.l.Lock()
+	tr.node = node
+	tr.l.Unlock()
 	r := &common.Runtime{
-		Node:     node,
-		MQPrefix: "rv/",
-		Log:      zap.New(core).Sugar(),
-		Cfg:      config.Config{MQAddress: "tcp://test:1883"},
+		Node:      node,
+		Transport: tr,
+		MQPrefix:  node2root + "/",
+		Log:       log,
+		Cfg:       config.Config{MQAddress: "tcp://test:1883"},
 	}
 	return r, tr, logs
 }
@@ -133,7 +176,7 @@ func TestSessionCall(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	replies, err := s.CallCollect(ctx, Request{Topic: "puppet", Command: puppet.Status})
 	require.NoError(t, err)
@@ -145,13 +188,14 @@ func TestSessionCall(t *testing.T) {
 
 	// the request goes out as the usual command envelope, with a reply topic
 	// under the session's own path
-	require.Len(t, tr.sent, 1)
-	assert.Equal(t, "rv/puppet", tr.sent[0].Path)
+	require.Len(t, tr.sent(), 1)
+	assert.Equal(t, "rv/puppet", tr.sent()[0].Path)
 	var cmd puppet.PuppetCmdRecv
-	require.NoError(t, tr.sent[0].Ev.Unmarshal(&cmd))
+	sentEv := tr.sent()[0].Ev
+	require.NoError(t, sentEv.Unmarshal(&cmd))
 	assert.Equal(t, puppet.Status, cmd.Command)
-	assert.True(t, strings.HasPrefix(tr.sent[0].Ev.ReplyTo, s.ReplyPath()+"/"))
-	assert.NotEmpty(t, tr.sent[0].Ev.Headers["correlation-id"])
+	assert.True(t, strings.HasPrefix(sentEv.ReplyTo, s.ReplyPath()+"/"))
+	assert.NotEmpty(t, sentEv.Headers["correlation-id"])
 }
 
 // two calls share one subscription, and neither sees the other's replies
@@ -166,7 +210,7 @@ func TestSessionCallIsolation(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -231,7 +275,7 @@ func TestSessionNodeError(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	replies, err := s.CallCollect(ctx, Request{Topic: "puppet", Command: "facts"})
 	require.NoError(t, err)
@@ -254,7 +298,7 @@ func TestSessionStrayReply(t *testing.T) {
 	tr.onSend = func(tr *loopback, path string, ev zerosvc.Event) {
 		tr.reply(ev, "b.example.com", common.PuppetRunStatus, puppet.LastRunSummary{})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	replies, err := s.CallCollect(ctx, Request{Topic: "puppet", Command: puppet.Status})
 	require.NoError(t, err)
@@ -298,7 +342,7 @@ func TestFilterMatch(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	streamed := make([]string, 0, 2)
 	out, err := s.FilterMatch(ctx, `(== (class "nginx") true)`, func(fqdn string) {
@@ -312,7 +356,8 @@ func TestFilterMatch(t *testing.T) {
 
 	// the expression travels as the filter of a status request
 	var cmd puppet.PuppetCmdRecv
-	require.NoError(t, tr.sent[0].Ev.Unmarshal(&cmd))
+	sentEv := tr.sent()[0].Ev
+	require.NoError(t, sentEv.Unmarshal(&cmd))
 	assert.Equal(t, puppet.Status, cmd.Command)
 	assert.Equal(t, `(== (class "nginx") true)`, cmd.Filter)
 }
@@ -336,7 +381,7 @@ func TestPuppetStatusAndFact(t *testing.T) {
 	defer s.Close()
 	// a broadcast never knows how many nodes will answer, so every call runs
 	// until its own deadline - they can not share one
-	statusCtx, cancelStatus := context.WithTimeout(context.Background(), time.Millisecond*300)
+	statusCtx, cancelStatus := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancelStatus()
 	status, coverage, err := PuppetStatusStream(statusCtx, s, "", nil)
 	require.NoError(t, err)
@@ -345,7 +390,7 @@ func TestPuppetStatusAndFact(t *testing.T) {
 	assert.Equal(t, 1, coverage.Matched)
 	assert.Equal(t, 1, coverage.Answered())
 
-	factCtx, cancelFact := context.WithTimeout(context.Background(), time.Millisecond*300)
+	factCtx, cancelFact := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancelFact()
 	facts, factCoverage, err := PuppetFactStream(factCtx, s, "virtual", "", nil)
 	require.NoError(t, err)
@@ -371,7 +416,7 @@ func TestSessionQuery(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	streamed := 0
 	out, err := s.Query(ctx, `(== (class "nginx") true)`, func(qr puppet.QueryReply) { streamed++ })
@@ -387,7 +432,8 @@ func TestSessionQuery(t *testing.T) {
 
 	// the expression travels in the filter field, as the query command
 	var cmd puppet.PuppetCmdRecv
-	require.NoError(t, tr.sent[0].Ev.Unmarshal(&cmd))
+	sentEv := tr.sent()[0].Ev
+	require.NoError(t, sentEv.Unmarshal(&cmd))
 	assert.Equal(t, puppet.Query, cmd.Command)
 	assert.Equal(t, `(== (class "nginx") true)`, cmd.Filter)
 }
@@ -411,7 +457,7 @@ func TestFilterMatchCounting(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	out, err := s.FilterMatch(ctx, `(== (class "nginx") true)`, nil)
 	require.NoError(t, err)
@@ -443,7 +489,7 @@ func TestNodeSnapshot(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 	snap, err := s.NodeSnapshot(ctx, "a.example.com")
 	require.NoError(t, err)
@@ -453,9 +499,7 @@ func TestNodeSnapshot(t *testing.T) {
 	assert.Equal(t, []string{"nginx", "systemd::common"}, snap.Classes)
 
 	// dumps are addressed at the node, not broadcast
-	tr.l.Lock()
-	defer tr.l.Unlock()
-	for _, sent := range tr.sent {
+	for _, sent := range tr.sent() {
 		assert.Equal(t, "rv/puppet/a.example.com", sent.Path)
 	}
 
@@ -473,7 +517,7 @@ func TestNodeFactsSubsetAndOldDaemon(t *testing.T) {
 		var cmd puppet.PuppetCmdRecv
 		_ = ev.Unmarshal(&cmd)
 		var opts puppet.FactListOptions
-		_ = json.Unmarshal(cmd.Parameters, &opts)
+		_ = cbor.Unmarshal(cmd.Parameters, &opts)
 		if len(opts.Keys) > 0 {
 			tr.reply(ev, "a.example.com", common.PuppetFacts, puppet.FactsReply{
 				FQDN:  "a.example.com",
@@ -487,7 +531,7 @@ func TestNodeFactsSubsetAndOldDaemon(t *testing.T) {
 	s, err := NewSession(r)
 	require.NoError(t, err)
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*300)
+	ctx, cancel := context.WithTimeout(context.Background(), testQueryTimeout)
 	defer cancel()
 
 	facts, err := s.NodeFacts(ctx, "a.example.com", "virtual")
@@ -528,4 +572,56 @@ func TestPuppetFilterMatch(t *testing.T) {
 	out, err := PuppetFilterMatch(ctx, r, `(== (class "nginx") true)`, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"a.example.com"}, out.Matched)
+}
+
+// PuppetStatus and PuppetFact are what the cli calls; they wrap a session and
+// report how much of the fleet took part
+func TestPuppetStatusAndFactWrappers(t *testing.T) {
+	r, tr, logs := testSessionRuntime(t)
+	tr.onSend = func(tr *loopback, path string, ev zerosvc.Event) {
+		var cmd puppet.PuppetCmdRecv
+		_ = ev.Unmarshal(&cmd)
+		switch cmd.Command {
+		case puppet.Status:
+			summary := puppet.LastRunSummary{}
+			summary.Resources.Total = 7
+			tr.reply(ev, "a.example.com", common.PuppetRunStatus, summary)
+			// a node the filter did not match answers too, so the count is real
+			tr.reply(ev, "b.example.com", common.PuppetNoMatch,
+				puppet.QueryReply{FQDN: "b.example.com"})
+		}
+	}
+	status := PuppetStatus(r, `(== (class "nginx") true)`)
+	require.Contains(t, status, "a.example.com")
+	assert.Equal(t, 7, status["a.example.com"].Resources.Total)
+	assert.NotContains(t, status, "b.example.com", "a no-match is counted, not returned")
+	assert.NotEmpty(t, logs.FilterMessageSnippet("1 matched, 2 answered").All())
+
+	t.Run("a filter is passed through", func(t *testing.T) {
+		var cmd puppet.PuppetCmdRecv
+		require.NoError(t, tr.sent()[0].Ev.Unmarshal(&cmd))
+		assert.Equal(t, `(== (class "nginx") true)`, cmd.Filter)
+		assert.True(t, cmd.AnswerAlways)
+	})
+	t.Run("more than one filter is a programming error", func(t *testing.T) {
+		assert.Panics(t, func() { PuppetStatus(r, "a", "b") })
+	})
+}
+
+func TestCoverage(t *testing.T) {
+	c := Coverage{Matched: 3, NoMatch: 360, Errors: 3}
+	assert.Equal(t, 366, c.Answered())
+	assert.Equal(t, "3 matched, 366 answered", c.String())
+	empty := Coverage{}
+	assert.Equal(t, 0, empty.Answered())
+}
+
+func TestFilterOutcomeAnswered(t *testing.T) {
+	out := FilterOutcome{
+		Matched: []string{"a"},
+		NoMatch: []string{"b", "c"},
+		Errors:  map[string]string{"d": "boom"},
+	}
+	assert.Equal(t, 4, out.Answered())
+	assert.Equal(t, 0, (&FilterOutcome{}).Answered())
 }

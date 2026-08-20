@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -47,11 +46,12 @@ type Reply struct {
 	// NoMatch is set when the node answered only to say the filter did not
 	// match it
 	NoMatch bool
+	ev      zerosvc.Event
 }
 
 // Unmarshal decodes the reply body
 func (r *Reply) Unmarshal(v interface{}) error {
-	return json.Unmarshal(r.Body, v)
+	return r.ev.Unmarshal(v)
 }
 
 // Session multiplexes any number of RPC calls over a single reply subscription.
@@ -141,7 +141,7 @@ func (s *Session) Call(ctx context.Context, req Request, onReply func(Reply) boo
 	ev.ReplyTo = s.replyPath + "/" + id
 	ev.Headers["correlation-id"] = id
 	start := time.Now()
-	if err := ev.Send(s.r.MQPrefix + req.Topic); err != nil {
+	if err := s.r.Node.SendEvent(req.Topic, ev); err != nil {
 		return fmt.Errorf("error sending %s command: %s", req.Command, err)
 	}
 	for {
@@ -180,7 +180,10 @@ func (s *Session) Close() error {
 	s.calls = make(map[string]chan Reply, 0)
 	ch := s.ch
 	s.l.Unlock()
-	go drainFor(ch, closeGrace)
+	// the channel can not be closed: the node writes into it from a goroutine of
+	// its own, so closing it would panic there. Draining it is the only way to
+	// keep the transport unblocked
+	go drain(ch)
 	return nil
 }
 
@@ -201,12 +204,12 @@ func callID(ev *zerosvc.Event) string {
 }
 
 func newReply(ev *zerosvc.Event) Reply {
-	r := Reply{Body: ev.Body}
+	r := Reply{Body: ev.Body, ev: *ev}
 	if fqdn, ok := ev.Headers["fqdn"].(string); ok {
 		r.FQDN = fqdn
 	} else {
-		// older daemons do not set the header on every reply type
-		r.FQDN = ev.NodeName()
+		// not every reply type sets the header
+		r.FQDN = ev.NodeName
 	}
 	if replyType, ok := ev.Headers["reply-type"].(string); ok {
 		r.ReplyType = replyType
@@ -216,7 +219,7 @@ func newReply(ev *zerosvc.Event) Reply {
 	}
 	if r.ReplyType == common.Error {
 		var msg puppet.Msg
-		if err := json.Unmarshal(ev.Body, &msg); err == nil && len(msg.Msg) > 0 {
+		if err := ev.Unmarshal(&msg); err == nil && len(msg.Msg) > 0 {
 			r.NodeErr = errors.New(msg.Msg)
 		} else {
 			r.NodeErr = fmt.Errorf("node reported an error: %s", string(ev.Body))

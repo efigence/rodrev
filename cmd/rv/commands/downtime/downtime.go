@@ -11,7 +11,7 @@ import (
 )
 
 func Downtime(cmd *cobra.Command, args []string) {
-	cfg, runtime, log := clinit.Init(cmd)
+	_, runtime, log := clinit.Init(cmd)
 	if len(args) < 1 {
 		cmd.Help()
 		os.Exit(1)
@@ -47,7 +47,7 @@ func Downtime(cmd *cobra.Command, args []string) {
 		log.Warnf("error marshalling request: %s\n", err)
 		os.Exit(2)
 	}
-	err = ev.Send(cfg.MQPrefix + "downtime/" + runtime.Certname)
+	err = runtime.Node.SendEvent("downtime/"+runtime.Certname, ev)
 	if err != nil {
 		fmt.Printf("error sending request: %s\n", err)
 		os.Exit(2)

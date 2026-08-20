@@ -1,10 +1,10 @@
 package puppet
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/util"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/zerosvc/go-zerosvc"
 	"os"
 	"strings"
@@ -19,7 +19,7 @@ func (p *Puppet) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName(), err)
+			p.l.Errorf("Error handling puppet event[%s]: %s:", ev.NodeName, err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
@@ -54,13 +54,15 @@ func (p *Puppet) HandleEvent(ev *zerosvc.Event) error {
 	if !res.Send {
 		return handlerErr
 	}
-	re := p.node.NewEvent()
-	re.Headers["fqdn"] = util.GetFQDN()
+	re := p.node.PrepareReply(*ev)
+	// the identity settled at startup, not whatever dns says right now - it has
+	// to match the fqdn the command bodies carry
+	re.Headers["fqdn"] = p.fqdn
 	if err := re.Marshal(res.Body); err != nil {
 		return fmt.Errorf("error marshalling %s reply: %s", cmd.Command, err)
 	}
 	re.Headers["reply-type"] = res.ReplyType
-	if err := ev.Reply(re); err != nil {
+	if err := p.runtime.Reply(ev, re); err != nil {
 		return err
 	}
 	return handlerErr
@@ -106,7 +108,7 @@ func (p *Puppet) handleCommand(cmd PuppetCmdRecv, reqPath []string) (handlerResu
 		return handlerResult{Body: summary, ReplyType: summary.RPCType(), Send: true}, nil
 	case Run:
 		var opts RunOptions
-		if err := json.Unmarshal(cmd.Parameters, &opts); err != nil {
+		if err := cbor.Unmarshal(cmd.Parameters, &opts); err != nil {
 			return handlerResult{}, fmt.Errorf("error unmarshalling puppet command: %s|[%s]", err, string(cmd.Parameters))
 		}
 		if !p.addressedToMe(reqPath) {
@@ -117,7 +119,7 @@ func (p *Puppet) handleCommand(cmd PuppetCmdRecv, reqPath []string) (handlerResu
 		return handlerResult{Body: &r, ReplyType: r.RPCType(), Send: true}, nil
 	case Fact:
 		var opts FactOptions
-		if err := json.Unmarshal(cmd.Parameters, &opts); err != nil {
+		if err := cbor.Unmarshal(cmd.Parameters, &opts); err != nil {
 			return handlerResult{}, fmt.Errorf("error unmarshalling [%s]: %s", string(cmd.Parameters), err)
 		}
 		facts := *(p.facts.Map())
@@ -183,7 +185,7 @@ func (p *Puppet) handleFactList(cmd PuppetCmdRecv, reqPath []string) (handlerRes
 	}
 	var opts FactListOptions
 	if len(cmd.Parameters) > 0 {
-		if err := json.Unmarshal(cmd.Parameters, &opts); err != nil {
+		if err := cbor.Unmarshal(cmd.Parameters, &opts); err != nil {
 			return handlerResult{}, fmt.Errorf("error unmarshalling [%s]: %s", string(cmd.Parameters), err)
 		}
 	}
