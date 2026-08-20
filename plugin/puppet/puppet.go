@@ -38,7 +38,7 @@ var DefaultConfig = Config{
 	LastRunReportYAML:  "/var/lib/puppet/state/last_run_report.yaml",
 	LastRunSummaryYAML: "/var/lib/puppet/state/last_run_summary.yaml",
 	FactsYAML:          "/var/lib/puppet/facts.yaml",
-	ClassfilePath:      "/var/lib/puppet/classes.txt",
+	ClassfilePath:      "/var/lib/puppet/state/classes.txt",
 	RefreshInterval:    time.Minute,
 }
 
