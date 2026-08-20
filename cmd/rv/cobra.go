@@ -268,7 +268,7 @@ func cobraInitFlags() {
 	)
 	queryCmd.Flags().Duration(
 		"timeout",
-		time.Second*3,
+		time.Second*4,
 		"how long to wait for query results",
 	)
 	queryCmd.Flags().String(

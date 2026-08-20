@@ -20,9 +20,20 @@ func (s *Session) streamResult(r NodeResult) {
 	case len(r.Err) > 0:
 		// errors are collected and collapsed in printQuery instead: a bad query
 		// makes every node answer with the same message
+		return
 	case r.Matched:
-		s.printf("  + %s", r.FQDN)
 	case s.verbose:
+	default:
+		return
+	}
+	if s.streamed >= streamLimit && !s.verbose {
+		s.suppressed++
+		return
+	}
+	s.streamed++
+	if r.Matched {
+		s.printf("  + %s", r.FQDN)
+	} else {
 		s.printf("  - %s", r.FQDN)
 	}
 }
@@ -73,6 +84,9 @@ func (s *Session) printQueryHuman(sum Summary, results []NodeResult) error {
 	if sum.Silent {
 		// every responder matched, printing both numbers would be noise
 		responded = " (nodes that do not match stay silent)"
+	}
+	if s.suppressed > 0 {
+		s.printf("  ... %d more not listed (:verbose to list every node)", s.suppressed)
 	}
 	s.printf("%d%s matched%s%s, %s",
 		sum.Matched, total, responded, errs, sum.Elapsed.Round(time.Millisecond))
