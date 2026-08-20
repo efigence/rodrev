@@ -32,7 +32,22 @@ const (
 	Status = "status"
 	Run    = "run"
 	Fact   = "fact"
+	// Query evaluates a filter expression and always answers with the result,
+	// so a client can tell "did not match" from "did not answer"
+	Query = "query"
+	// FactList and ClassList dump everything the node knows, for building a
+	// query against real data
+	FactList  = "facts"
+	ClassList = "classes"
 )
+
+// Features are the commands this daemon understands. It is announced in the
+// heartbeat so clients can tell whether they are talking to an older daemon
+var Features = []string{Status, Run, Fact, Query, FactList, ClassList, FeatureAnswerAlways}
+
+// FeatureAnswerAlways is not a command but a capability: this daemon answers
+// requests carrying answer_always even when the filter did not match
+const FeatureAnswerAlways = "answer-always"
 
 var DefaultConfig = Config{
 	LastRunReportYAML:  "/var/lib/puppet/state/last_run_report.yaml",
@@ -123,16 +138,21 @@ func New(cfg Config) (*Puppet, error) {
 }
 
 type PuppetCmdSend struct {
-	Command    string      `json:"cmd"`
-	Filter     string      `json:"filter,omitempty"`
-	Parameters interface{} `json:"params"`
+	Command string `json:"cmd"`
+	Filter  string `json:"filter,omitempty"`
+	// AnswerAlways asks nodes that the filter did not match to say so instead of
+	// staying quiet, so the client learns how many nodes took part in the
+	// request. Daemons that do not know the field ignore it
+	AnswerAlways bool        `json:"answer_always,omitempty"`
+	Parameters   interface{} `json:"params"`
 }
 
 // wrapper so we can delay unmarshalling parameters and switch on Command
 type PuppetCmdRecv struct {
-	Command    string          `json:"cmd"`
-	Filter     string          `json:"filter,omitempty"`
-	Parameters json.RawMessage `json:"params"`
+	Command      string          `json:"cmd"`
+	Filter       string          `json:"filter,omitempty"`
+	AnswerAlways bool            `json:"answer_always,omitempty"`
+	Parameters   json.RawMessage `json:"params"`
 }
 
 type Msg struct {

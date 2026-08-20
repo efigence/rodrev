@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/efigence/rodrev/common"
 )
 
 // Snapshot is a node's puppet state - facts, classes and optionally the last run
@@ -71,4 +73,66 @@ func fileTime(path string) time.Time {
 		return st.ModTime()
 	}
 	return time.Now()
+}
+
+// wire types for the query/facts/classes commands
+
+// QueryReply is what the Query command answers with. Every node answers,
+// including the ones that did not match and the ones where the query broke,
+// so the client can count them
+type QueryReply struct {
+	FQDN    string `json:"fqdn"`
+	Matched bool   `json:"matched"`
+	// Error is the query error as seen by this node, if any
+	Error string `json:"error,omitempty"`
+	// Type and Value describe a result that was not a boolean
+	Type  string `json:"type,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+func (q *QueryReply) RPCType() string { return common.PuppetQuery }
+
+// FactListOptions narrows down a fact dump. A full fact set is tens of
+// kilobytes per node, so asking for a few keys is worth the option
+type FactListOptions struct {
+	Keys []string `json:"keys,omitempty"`
+}
+
+type FactsReply struct {
+	FQDN  string                 `json:"fqdn"`
+	TS    time.Time              `json:"ts"`
+	Count int                    `json:"count"`
+	Facts map[string]interface{} `json:"facts"`
+}
+
+func (f *FactsReply) RPCType() string { return common.PuppetFacts }
+
+type ClassesReply struct {
+	FQDN    string    `json:"fqdn"`
+	TS      time.Time `json:"ts"`
+	Classes []string  `json:"classes"`
+}
+
+func (c *ClassesReply) RPCType() string { return common.PuppetClasses }
+
+// Snapshot builds a snapshot out of the two dump replies. Either may be nil,
+// for a node that only answered one of them
+func SnapshotFromReplies(facts *FactsReply, classes *ClassesReply) *Snapshot {
+	var s Snapshot
+	if facts != nil {
+		s.FQDN = facts.FQDN
+		s.TS = facts.TS
+		s.Facts = facts.Facts
+	}
+	if classes != nil {
+		if len(s.FQDN) == 0 {
+			s.FQDN = classes.FQDN
+		}
+		if s.TS.IsZero() {
+			s.TS = classes.TS
+		}
+		s.Classes = classes.Classes
+	}
+	s.Source = "node:" + s.FQDN
+	return &s
 }

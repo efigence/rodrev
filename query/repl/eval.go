@@ -51,3 +51,9 @@ type Backend interface {
 	Snapshot(ctx context.Context, fqdn string) (*puppet.Snapshot, error)
 	Close() error
 }
+
+// capabilityReporter is implemented by backends that can say something about
+// what the fleet they talk to supports
+type capabilityReporter interface {
+	Capabilities() string
+}

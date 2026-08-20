@@ -17,6 +17,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
+	"strings"
 	"time"
 )
 
@@ -49,6 +50,7 @@ func New(cfg config.Config) (*Daemon, error) {
 	d.node = zerosvc.NewNode(d.fqdn, uuid.NewV4().String())
 	d.node.Info["fqdn"] = d.fqdn
 	d.node.Info["version"] = cfg.Version
+	d.node.Info["features"] = strings.Join(puppet.Features, ",")
 
 	d.node.Services["puppet"] = zerosvc.Service{
 		Path:        "puppet",

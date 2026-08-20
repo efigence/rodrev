@@ -42,6 +42,21 @@ func (d *Discovery) ActiveNodes() []string {
 	return out
 }
 
+// WithFeature returns the active nodes announcing support for a command
+func (d *Discovery) WithFeature(feature string) []string {
+	out := make([]string, 0, len(d.Active))
+	for fqdn, node := range d.Active {
+		for _, f := range node.Features {
+			if f == feature {
+				out = append(out, fqdn)
+				break
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // DiscoverOnce lists nodes that announced themselves via heartbeats and stops
 // listening once it is done.
 //
@@ -114,23 +129,30 @@ func Discover(r *common.Runtime) (
 // services it announced
 func parseHeartbeat(r *common.Runtime, ev *zerosvc.Event) (common.Node, []string, bool) {
 	node := common.Node{Services: make([]string, 0)}
-	path := strings.Split(ev.RoutingKey, "/")
-	if len(path) < 2 {
-		r.Log.Errorf("path too short: %s", ev.RoutingKey)
+	source := heartbeatSource(ev)
+	if len(strings.Split(ev.RoutingKey, "/")) < 2 {
+		r.Log.Errorf("heartbeat from [%s]: path too short: %s", source, ev.RoutingKey)
 	}
 	var hb zerosvc.Heartbeat
 	if err := json.Unmarshal(ev.Body, &hb); err != nil {
-		r.Log.Errorf("error unmarshalling %s: %s", string(ev.Body), err)
+		// an empty body is a retained heartbeat being cleared, which is why the
+		// size is worth printing along with the sender
+		r.Log.Errorf("error unmarshalling heartbeat from [%s] (%d bytes: %s): %s",
+			source, len(ev.Body), string(ev.Body), err)
 		return node, nil, false
 	}
 	fqdn, ok := hb.NodeInfo["fqdn"].(string)
 	if !ok {
-		r.Log.Warnf("node without info data: %s", ev.NodeName())
+		r.Log.Warnf("heartbeat from [%s] has no fqdn in node info, ignoring", source)
 		return node, nil, false
 	}
 	node.FQDN = fqdn
 	if version, ok := hb.NodeInfo["version"].(string); ok {
 		node.DaemonVersion = version
+	}
+	// older daemons announce no features at all
+	if features, ok := hb.NodeInfo["features"].(string); ok && len(features) > 0 {
+		node.Features = strings.Split(features, ",")
 	}
 	ts := ev.TS()
 	node.LastUpdate = &ts
@@ -141,6 +163,19 @@ func parseHeartbeat(r *common.Runtime, ev *zerosvc.Event) (common.Node, []string
 	sort.Strings(services)
 	node.Services = services
 	return node, services, true
+}
+
+// heartbeatSource names whoever sent a heartbeat. The topic ends with the node
+// name, which is the only identity available when the payload can not be parsed
+// - the node-name header is empty on a cleared retained message
+func heartbeatSource(ev *zerosvc.Event) string {
+	if path := strings.Split(ev.RoutingKey, "/"); len(path) > 0 && len(path[len(path)-1]) > 0 {
+		return path[len(path)-1]
+	}
+	if name := ev.NodeName(); len(name) > 0 {
+		return name
+	}
+	return "unknown"
 }
 
 // drain keeps reading a channel nobody cares about any more, so the zerosvc

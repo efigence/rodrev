@@ -53,8 +53,8 @@ func (s *Session) printQueryHuman(sum Summary, results []NodeResult) error {
 	for _, line := range collapseErrors(results) {
 		s.printf("  ! %s", line)
 	}
-	// a single-node local result is more useful as a value than as a count
-	if sum.Known == 1 && sum.Responded == 1 {
+	// a single-node result is more useful as a value than as a count
+	if sum.Known == 1 && sum.Responded == 1 && len(results) == 1 {
 		r := results[0]
 		if len(r.Err) > 0 {
 			return nil
@@ -80,18 +80,25 @@ func (s *Session) printQueryHuman(sum Summary, results []NodeResult) error {
 	if sum.Errors > 0 {
 		errs = fmt.Sprintf(", %d errors", sum.Errors)
 	}
-	responded := fmt.Sprintf(", %d responded", sum.Responded)
-	if sum.Silent {
-		// every responder matched, printing both numbers would be noise
-		responded = " (nodes that do not match stay silent)"
+	answered := fmt.Sprintf(", %d answered", sum.Responded)
+	if sum.Known > 0 && sum.Responded < sum.Known {
+		answered = fmt.Sprintf(", %d of %d answered", sum.Responded, sum.Known)
 	}
 	if s.suppressed > 0 {
 		s.printf("  ... %d more not listed (:verbose to list every node)", s.suppressed)
 	}
 	s.printf("%d%s matched%s%s, %s",
-		sum.Matched, total, responded, errs, sum.Elapsed.Round(time.Millisecond))
-	if sum.Responded == 0 && sum.Known == 0 {
+		sum.Matched, total, answered, errs, sum.Elapsed.Round(time.Millisecond))
+	switch {
+	case sum.Responded == 0 && sum.Known == 0:
 		s.printf("   no node answered and none were discovered - is the MQ reachable? (:nodes -r)")
+	case sum.Silent && sum.Responded < sum.Known:
+		// only the daemons that answer no-match can be counted, so the rest of
+		// the fleet is unaccounted for rather than known to be down
+		s.printf("   nodes that did not match stayed silent, so only the match count is exact")
+	case sum.Known > 0 && sum.Responded < sum.Known:
+		s.printf("   %d nodes did not answer within %s (:timeout to wait longer)",
+			sum.Known-sum.Responded, s.timeout)
 	}
 	return nil
 }
