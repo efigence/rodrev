@@ -70,7 +70,12 @@ func Query(cmd *cobra.Command, args []string) {
 			runtime.Log = clinit.InitLog(false, true)
 		}
 		cfg.Log = log
-		cfg.Backend = repl.NewClusterBackend(&runtime, log)
+		backend, err := repl.NewClusterBackend(&runtime, log)
+		if err != nil {
+			log.Errorf("%s", err)
+			os.Exit(2)
+		}
+		cfg.Backend = backend
 		if len(factsPath) > 0 || len(dataDir) > 0 {
 			// fact/class data for completion and :fact, evaluation still remote
 			if snap, err := loadLocal(dataDir, factsPath, classesPath, lastRunPath); err == nil {

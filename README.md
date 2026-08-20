@@ -91,9 +91,16 @@ rv query --data-dir t-data -o json -e '(fact "is_virtual")' # local, machine rea
 echo '(== (class "nginx") true)' | rv query -o csv
 ```
 
-Note that in cluster mode nodes that do not match stay silent, so a query reports how many
-matched but can not tell "did not match" apart from "is down"; `:nodes` lists what
-discovery found.
+`:snapshot <fqdn>` pulls a node's full fact set and class list over the MQ, so completion,
+`:fact` and `:class` work against real fleet data; `:local` then re-evaluates queries against
+that snapshot with no round trip per query, which is the fast way to iterate on an
+expression before letting it loose on the fleet.
+
+How exact the cluster counts are depends on the daemons. An `rvd` that supports the `query`
+command answers every query - matched, not matched, or "the query broke here" - so counts and
+per-node errors are exact. Older daemons only answer when a filter matches, so a query
+reports how many matched but can not tell "did not match" apart from "is down". `:nodes`
+lists what discovery found and which of the two you are getting.
 
 ### Testing queries
 
@@ -117,6 +124,34 @@ and run `go test ./plugin/puppet/ -run TestQueryHarness -v`. Point the harness a
 directory with the same three file names to test against another node's data.
 
 
+
+### Daemon commands
+
+The puppet module answers these commands (`rv` sends them, the daemon announces the list in
+its heartbeat as `features` so clients can tell an older daemon apart):
+
+| command | what it does |
+|---|---|
+| `status` | last run summary, optionally filtered |
+| `run` | trigger a puppet run |
+| `fact` | value of one named fact |
+| `query` | evaluate an expression and always answer with the result |
+| `facts` | dump the whole fact set. Has to be addressed at a node (`puppet/<fqdn>`) or narrowed with a filter |
+| `classes` | dump the class list, same addressing rules |
+
+Any command can carry `answer_always`, which asks the nodes a filter did **not** match to
+say so instead of staying quiet. The replies then tell you how many nodes actually ran the
+filter, so `rv` does not have to ask heartbeats who is supposed to exist - useful because a
+retained heartbeat only proves a node published one at some point, while an answer proves the
+node received and evaluated this request. Daemons that predate the flag ignore it and stay
+silent, so a mixed fleet still reports exact match counts and an approximate total.
+
+Heartbeats are still what tells you which nodes *should* be there, including ones that are
+down, which is why `rv query` reports both: `3/366 matched, 366 answered`.
+
+Every daemon subscribes to the whole `puppet/#` tree, so a request addressed at one node is
+delivered to all of them and the node itself decides whether it was meant for it. That is
+why `facts`/`classes` refuse a bare broadcast: a fact dump is tens of kilobytes per node.
 
 ## Feature list
 

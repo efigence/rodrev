@@ -289,11 +289,59 @@ func TestClusterShapedOutput(t *testing.T) {
 	assert.Contains(t, got, "+ d2.example.com")
 	assert.NotContains(t, got, "- d3.example.com", "non-matching nodes are quiet unless :verbose")
 	assert.Contains(t, got, "! d4.example.com: error running query [x]: boom")
-	assert.Contains(t, got, "2/12 matched, 4 responded, 1 errors")
+	assert.Contains(t, got, "2/12 matched, 4 of 12 answered, 1 errors")
 	assert.Equal(t, 2, s.ExitCode(), "a node error is an error")
 
 	out.Reset()
 	require.NoError(t, s.EvalLine(":verbose"))
 	require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
 	assert.Contains(t, out.String(), "- d3.example.com")
+}
+
+// the summary must say how much of the fleet was actually accounted for
+func TestSummaryCoverage(t *testing.T) {
+	tests := []struct {
+		name     string
+		backend  *fakeBackend
+		contains []string
+		absent   []string
+	}{
+		{
+			name: "every node answered",
+			backend: &fakeBackend{known: 3, results: []NodeResult{
+				{FQDN: "a", Matched: true}, {FQDN: "b"}, {FQDN: "c"},
+			}},
+			contains: []string{"1/3 matched, 3 answered"},
+			absent:   []string{"did not answer", "stayed silent"},
+		},
+		{
+			name: "some nodes did not answer in time",
+			backend: &fakeBackend{known: 5, results: []NodeResult{
+				{FQDN: "a", Matched: true}, {FQDN: "b"},
+			}},
+			contains: []string{"1/5 matched, 2 of 5 answered", "3 nodes did not answer"},
+		},
+		{
+			name: "old daemons stay silent when they do not match",
+			backend: &fakeBackend{known: 5, silent: true, results: []NodeResult{
+				{FQDN: "a", Matched: true},
+			}},
+			contains: []string{"1/5 matched, 1 of 5 answered", "only the match count is exact"},
+			absent:   []string{"did not answer within"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			s, err := New(Config{Backend: tt.backend, Out: &out, Verbose: true})
+			require.NoError(t, err)
+			require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+			for _, want := range tt.contains {
+				assert.Contains(t, out.String(), want)
+			}
+			for _, unwanted := range tt.absent {
+				assert.NotContains(t, out.String(), unwanted)
+			}
+		})
+	}
 }

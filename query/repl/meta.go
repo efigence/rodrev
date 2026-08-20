@@ -173,6 +173,11 @@ func (s *Session) metaNodes(args []string) error {
 		s.printf("  %s", n)
 	}
 	s.printf("%d nodes", len(sorted))
+	if reporter, ok := s.backend.(capabilityReporter); ok {
+		if caps := reporter.Capabilities(); len(caps) > 0 {
+			s.printf("%s", caps)
+		}
+	}
 	return nil
 }
 

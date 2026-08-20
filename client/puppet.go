@@ -1,80 +1,65 @@
 package client
 
 import (
-	"encoding/json"
+	"context"
+	"time"
+
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
-	"github.com/efigence/rodrev/util"
-	"github.com/k0kubun/pp/v3"
 	"github.com/zerosvc/go-zerosvc"
-	"time"
 )
 
 type Opts struct {
 	Noop bool
 }
 
+// PuppetStatus returns the last puppet run summary of every node matching the
+// optional filter
 func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRunSummary {
 	statusMap := make(map[string]puppet.LastRunSummary, 0)
-	replyPath, replyCh, err := r.GetReplyChan()
+	s, err := NewSession(r)
 	if err != nil {
-		// without a reply channel there is nothing to wait for, and closing it
-		// below would panic
-		r.Log.Errorf("error getting reply channel: %s", err)
+		r.Log.Errorf("%s", err)
 		return statusMap
 	}
-	defer close(replyCh)
-	query := r.Node.NewEvent()
-	f := ""
-	if len(filter) == 1 {
-		f = filter[0]
-	}
-	if len(filter) > 1 {
-		panic("filter accepts 0 or 1 arguments")
-	}
-	err = query.Marshal(&puppet.PuppetCmdSend{
-		Command:    puppet.Status,
-		Filter:     f,
-		Parameters: nil,
-	})
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultQueryTimeout)
+	defer cancel()
+	r.Log.Debugf("sending status request, waiting %s for replies", DefaultQueryTimeout)
+	statusMap, coverage, err := PuppetStatusStream(ctx, s, oneFilter(filter), nil)
 	if err != nil {
-		r.Log.Panicf("error marshalling command: %s", err)
+		r.Log.Errorf("%s", err)
 	}
-	query.ReplyTo = replyPath
-	r.Log.Info("sending command")
-	if r.Debug {
-		r.Log.Debugf("query ev: %s", util.PPEvent(&query))
-	}
-	err = query.Send(r.MQPrefix + "puppet")
-	if err != nil {
-		r.Log.Errorf("err sending: %s", err)
-	}
-	r.Log.Info("waiting 4s for response")
-	go func() {
-		for ev := range replyCh {
-			if r.Debug {
-				r.Log.Debugf("reply ev: %s", util.PPEvent(&ev))
-			}
-			var summary puppet.LastRunSummary
-			var fqdn string
-			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Infof("skipping message, no fqdn header: %s", util.PPEvent(&ev))
-				continue
-			} else {
-				fqdn = v
-			}
-			err := ev.Unmarshal(&summary)
-			if err != nil {
-				r.Log.Errorf("error decoding message: %s -> %s", err, util.PPEvent(&ev))
-				continue
-			}
-			statusMap[fqdn] = summary
-		}
-	}()
-	time.Sleep(time.Second * 4)
+	r.Log.Infof("%s", coverage.String())
 	return statusMap
 }
 
+// PuppetFact returns the value of one fact from every node matching the
+// optional filter
+func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string]interface{} {
+	facts := make(map[string]interface{}, 0)
+	s, err := NewSession(r)
+	if err != nil {
+		r.Log.Errorf("%s", err)
+		return facts
+	}
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultQueryTimeout)
+	defer cancel()
+	r.Log.Debugf("sending fact request, waiting %s for replies", DefaultQueryTimeout)
+	facts, coverage, err := PuppetFactStream(ctx, s, factName, oneFilter(filter), nil)
+	if err != nil {
+		r.Log.Errorf("%s", err)
+	}
+	r.Log.Infof("%s", coverage.String())
+	return facts
+}
+
+// PuppetRun triggers a puppet run on one node, or on every node matching the
+// filter when node is "all".
+//
+// The returned channel is closed before it can be read from, so replies are not
+// available through it; use a Session directly if you need them
 func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duration, opts Opts) chan zerosvc.Event {
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
@@ -100,77 +85,4 @@ func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duratio
 	}
 	return replyCh
 
-}
-
-func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string]interface{} {
-	facts := make(map[string]interface{}, 0)
-	replyPath, replyCh, err := r.GetReplyChan()
-	if err != nil {
-		r.Log.Errorf("error getting reply channel: %s", err)
-		return facts
-	}
-	defer close(replyCh)
-	query := r.Node.NewEvent()
-	f := ""
-	if len(filter) == 1 {
-		f = filter[0]
-	}
-	if len(filter) > 1 {
-		panic("filter accepts 0 or 1 arguments")
-	}
-	err = query.Marshal(&puppet.PuppetCmdSend{
-		Command:    puppet.Fact,
-		Filter:     f,
-		Parameters: puppet.FactOptions{Name: factName},
-	})
-	if err != nil {
-		r.Log.Panicf("error marshalling command: %s", err)
-	}
-	query.ReplyTo = replyPath
-	r.Log.Info("sending command")
-	if r.Debug {
-		r.Log.Debugf("ev: %s", util.PPEvent(&query))
-	}
-	err = query.Send(r.MQPrefix + "puppet")
-	if err != nil {
-		r.Log.Errorf("err sending: %s", err)
-	}
-	r.Log.Info("waiting 4s for response")
-	go func() {
-		for ev := range replyCh {
-			if r.Debug {
-				r.Log.Debugf("received event: %s", util.PPEvent(&ev))
-				r.Log.Debugf("body: %s", string(ev.Body))
-			}
-			if replyType, ok := ev.Headers["reply-type"]; ok {
-				switch replyType {
-				case common.Error:
-					var m interface{}
-					json.Unmarshal(ev.Body, m)
-					r.Log.Infof("error from client %s: %s",
-						ev.NodeName(),
-						pp.Sprint(m),
-					)
-					continue
-				}
-			}
-			var fact map[string]interface{}
-			var fqdn string
-			if v, ok := ev.Headers["fqdn"].(string); !ok {
-				r.Log.Infof("skipping message, no fqdn header: %s", util.PPEvent(&ev))
-				continue
-			} else {
-				fqdn = v
-			}
-			err := ev.Unmarshal(&fact)
-			if err != nil {
-				r.Log.Errorf("error decoding message: %s", err)
-				continue
-			}
-
-			facts[fqdn] = fact[factName]
-		}
-	}()
-	time.Sleep(time.Second * 4)
-	return facts
 }
