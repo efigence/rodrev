@@ -1,6 +1,8 @@
 package repl
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -182,4 +184,54 @@ func TestCompleteRunes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompleteSnapshotSubcommands(t *testing.T) {
+	st := testCompletionState(t)
+	st.Nodes = []string{"d1-lg.example.com", "d2-lg.example.com"}
+	st.Files = func(prefix string) []string { return []string{prefix + "node.json "} }
+	tests := []struct {
+		name     string
+		line     string
+		head     string
+		contains []string
+	}{
+		{name: "nodes and subcommands", line: ":snapshot ", head: ":snapshot ",
+			contains: []string{"save ", "load ", "d1-lg.example.com "}},
+		{name: "narrowed to a subcommand", line: ":snapshot sa", head: ":snapshot ",
+			contains: []string{"save "}},
+		{name: "path after save", line: ":snapshot save prod", head: ":snapshot save ",
+			contains: []string{"prodnode.json "}},
+		{name: "path after load", line: ":snapshot load ", head: ":snapshot load ",
+			contains: []string{"node.json "}},
+		{name: "path for local", line: ":local t-", head: ":local ",
+			contains: []string{"t-node.json "}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			head, completions, _ := Complete(st, tt.line, len([]rune(tt.line)))
+			assert.Equal(t, tt.head, head)
+			for _, want := range tt.contains {
+				assert.Contains(t, completions, want)
+			}
+		})
+	}
+}
+
+// with no path completer wired up, path arguments simply do not complete
+func TestCompleteNoPathCompleter(t *testing.T) {
+	st := testCompletionState(t)
+	st.Files = nil
+	_, completions, _ := Complete(st, ":snapshot save x", len(":snapshot save x"))
+	assert.Empty(t, completions)
+}
+
+func TestGlobPaths(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "node.json"), []byte("{}"), 0600))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "sub"), 0700))
+	got := GlobPaths(dir + string(os.PathSeparator))
+	assert.Contains(t, got, filepath.Join(dir, "node.json")+" ")
+	// directories get a separator so the next segment can be typed straight away
+	assert.Contains(t, got, filepath.Join(dir, "sub")+string(os.PathSeparator))
 }

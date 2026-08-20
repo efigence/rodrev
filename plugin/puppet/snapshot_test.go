@@ -1,8 +1,10 @@
 package puppet
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -125,4 +127,65 @@ func TestClassesList(t *testing.T) {
 	assert.Equal(t, 1, (*f.Map())["a"])
 	assert.Error(t, f.UpdateFacts())
 	assert.Empty(t, *NewFactsFromMap(nil).Map())
+}
+
+// a snapshot saved to disk queries exactly like the data it came from
+func TestSnapshotSaveLoad(t *testing.T) {
+	original := testSnapshot(t)
+	path := filepath.Join(t.TempDir(), "node.json")
+	require.NoError(t, original.Save(path))
+
+	st, err := os.Stat(path)
+	require.NoError(t, err)
+	// facts describe a host in detail, the file stays private
+	assert.Equal(t, os.FileMode(0600), st.Mode().Perm())
+
+	loaded, err := LoadSnapshotFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, original.FQDN, loaded.FQDN)
+	assert.Equal(t, original.Classes, loaded.Classes)
+	assert.Equal(t, original.Facts["virtual"], loaded.Facts["virtual"])
+	assert.Equal(t, original.Source, loaded.Source)
+	assert.WithinDuration(t, original.TS, loaded.TS, time.Second)
+
+	fromFiles, err := NewQueryHarness(testDataDir, nil)
+	require.NoError(t, err)
+	fromSaved, err := loaded.Harness(nil)
+	require.NoError(t, err)
+	for _, tt := range queryTests {
+		t.Run(tt.query, func(t *testing.T) {
+			want, wantErr := fromFiles.Query(tt.query)
+			got, gotErr := fromSaved.Query(tt.query)
+			assert.Equal(t, want, got)
+			assert.Equal(t, wantErr == nil, gotErr == nil)
+		})
+	}
+}
+
+func TestLoadSnapshotFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	t.Run("missing", func(t *testing.T) {
+		_, err := LoadSnapshotFile(filepath.Join(dir, "nope.json"))
+		assert.Error(t, err)
+	})
+	t.Run("not json", func(t *testing.T) {
+		path := filepath.Join(dir, "broken.json")
+		require.NoError(t, os.WriteFile(path, []byte("{{{"), 0600))
+		_, err := LoadSnapshotFile(path)
+		assert.Error(t, err)
+	})
+	t.Run("no data in it", func(t *testing.T) {
+		path := filepath.Join(dir, "empty.json")
+		require.NoError(t, os.WriteFile(path, []byte(`{"fqdn":"a.example.com"}`), 0600))
+		_, err := LoadSnapshotFile(path)
+		assert.Error(t, err)
+	})
+	t.Run("source is filled in when missing", func(t *testing.T) {
+		path := filepath.Join(dir, "nosource.json")
+		require.NoError(t, os.WriteFile(path,
+			[]byte(`{"fqdn":"a.example.com","facts":{"virtual":"kvm"}}`), 0600))
+		s, err := LoadSnapshotFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, "file:"+path, s.Source)
+	})
 }

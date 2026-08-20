@@ -1,6 +1,7 @@
 package query
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -27,8 +28,19 @@ func Query(cmd *cobra.Command, args []string) {
 	timeout := util.DurationOrPanic(c.GetDuration("timeout"))
 	historyFile := util.StringOrPanic(c.GetString("history"))
 	noHistory := util.BoolOrPanic(c.GetBool("no-history"))
-	exprs, err := c.GetStringArray("eval")
+	snapshotNode := util.StringOrPanic(c.GetString("snapshot"))
+	snapshotFile := util.StringOrPanic(c.GetString("snapshot-file"))
+	nodeMetaArgs, err := c.GetStringArray("node-meta")
 	if err != nil {
+		nodeMetaArgs = []string{}
+	}
+	nodeMeta, err := repl.ParseNodeMeta(nodeMetaArgs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s\n", err)
+		os.Exit(2)
+	}
+	exprs, errEval := c.GetStringArray("eval")
+	if errEval != nil {
 		exprs = []string{}
 	}
 	// a query can also be passed as a positional argument
@@ -39,9 +51,11 @@ func Query(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "error: --data-dir can not be combined with --facts/--classes")
 		os.Exit(2)
 	}
-	local := localFlag || len(factsPath) > 0 || len(classesPath) > 0 || len(dataDir) > 0
+	local := localFlag || len(factsPath) > 0 || len(classesPath) > 0 ||
+		len(dataDir) > 0 || len(snapshotFile) > 0
 
 	var cfg repl.Config
+	cfg.NodeMeta = nodeMeta
 	cfg.Format = format
 	cfg.Timeout = timeout
 	cfg.Quiet = quiet
@@ -50,12 +64,12 @@ func Query(cmd *cobra.Command, args []string) {
 	if local {
 		_, log := clinit.InitOffline(cmd)
 		cfg.Log = log
-		snap, err := loadLocal(dataDir, factsPath, classesPath, lastRunPath)
+		snap, err := loadLocal(snapshotFile, dataDir, factsPath, classesPath, lastRunPath)
 		if err != nil {
 			log.Errorf("%s", err)
 			os.Exit(2)
 		}
-		harness, err := snap.Harness(nil)
+		harness, err := snap.Harness(nodeMeta)
 		if err != nil {
 			log.Errorf("%s", err)
 			os.Exit(2)
@@ -76,14 +90,19 @@ func Query(cmd *cobra.Command, args []string) {
 			os.Exit(2)
 		}
 		cfg.Backend = backend
-		if len(factsPath) > 0 || len(dataDir) > 0 {
-			// fact/class data for completion and :fact, evaluation still remote
-			if snap, err := loadLocal(dataDir, factsPath, classesPath, lastRunPath); err == nil {
-				cfg.Snapshot = snap
-			} else {
+		if len(snapshotNode) > 0 {
+			// completion and :fact against a real node's data, evaluation still
+			// happens on the cluster
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			snap, err := backend.Snapshot(ctx, snapshotNode)
+			cancel()
+			if err != nil {
 				log.Errorf("%s", err)
+			} else {
+				cfg.Snapshot = snap
 			}
 		}
+
 	}
 
 	// one-shot mode: evaluate what was asked for and exit with the result
@@ -121,7 +140,10 @@ func Query(cmd *cobra.Command, args []string) {
 }
 
 // loadLocal turns the file flags into a snapshot
-func loadLocal(dataDir, factsPath, classesPath, lastRunPath string) (*puppet.Snapshot, error) {
+func loadLocal(snapshotFile, dataDir, factsPath, classesPath, lastRunPath string) (*puppet.Snapshot, error) {
+	if len(snapshotFile) > 0 {
+		return puppet.LoadSnapshotFile(snapshotFile)
+	}
 	if len(dataDir) > 0 {
 		return puppet.LoadSnapshotFiles(
 			dataDir+"/"+puppet.HarnessFactsFile,

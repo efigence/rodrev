@@ -1,8 +1,10 @@
 package puppet
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/efigence/rodrev/common"
@@ -135,4 +137,53 @@ func SnapshotFromReplies(facts *FactsReply, classes *ClassesReply) *Snapshot {
 	}
 	s.Source = "node:" + s.FQDN
 	return &s
+}
+
+// Save writes the snapshot as JSON. Facts describe a host in detail, so the file
+// is kept readable by its owner only
+func (s *Snapshot) Save(path string) error {
+	out, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error encoding snapshot: %w", err)
+	}
+	// write and rename, so an interrupted save can not leave a half file behind
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*")
+	if err != nil {
+		return fmt.Errorf("error saving snapshot: %w", err)
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0600); err != nil {
+		return fmt.Errorf("error setting snapshot permissions: %w", err)
+	}
+	if _, err := tmp.Write(out); err != nil {
+		tmp.Close()
+		return fmt.Errorf("error saving snapshot: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("error saving snapshot: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		return fmt.Errorf("error saving snapshot: %w", err)
+	}
+	return nil
+}
+
+// LoadSnapshotFile reads a snapshot saved by Save
+func LoadSnapshotFile(path string) (*Snapshot, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading snapshot: %w", err)
+	}
+	var s Snapshot
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, fmt.Errorf("error parsing snapshot [%s]: %w", path, err)
+	}
+	if len(s.Facts) == 0 && len(s.Classes) == 0 {
+		return nil, fmt.Errorf("snapshot [%s] has neither facts nor classes", path)
+	}
+	if len(s.Source) == 0 {
+		s.Source = "file:" + path
+	}
+	return &s, nil
 }

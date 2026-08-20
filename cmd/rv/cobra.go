@@ -86,6 +86,7 @@ var queryCmd = &cobra.Command{
 		`query '(== (class "nginx") true)'                       one shot, exit 0 when something matched`,
 		`query -o json -e '(== (fact "virtual") "kvm")'          machine readable`,
 		`query --data-dir t-data                                 offline, against example data`,
+		`query --snapshot-file prod-node.json                    offline, against a saved node`,
 		`query --facts /var/lib/puppet/facts.yaml --classes /var/lib/puppet/state/classes.txt`,
 	}, "\n  "),
 	Run: query.Query,
@@ -244,7 +245,7 @@ func cobraInitFlags() {
 	queryCmd.Flags().String(
 		"facts",
 		"",
-		"facts.yaml to use. Implies local evaluation; in cluster mode it only feeds completion and :fact",
+		"facts.yaml to use. Implies local evaluation",
 	)
 	queryCmd.Flags().String(
 		"classes",
@@ -260,6 +261,21 @@ func cobraInitFlags() {
 		"data-dir",
 		"",
 		"directory with facts.yaml/classes.txt/last_run_summary.yaml. Implies local evaluation",
+	)
+	queryCmd.Flags().String(
+		"snapshot",
+		"",
+		"fqdn to pull facts/classes from at startup, for completion and :fact in cluster mode",
+	)
+	queryCmd.Flags().String(
+		"snapshot-file",
+		"",
+		"snapshot file saved with ':snapshot save'. Implies local evaluation",
+	)
+	queryCmd.Flags().StringArray(
+		"node-meta",
+		[]string{},
+		"override an entry of the `node` variable, as key=value. Can be repeated",
 	)
 	queryCmd.Flags().Bool(
 		"local",

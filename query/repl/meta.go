@@ -27,7 +27,7 @@ func metaCommands() []metaCmd {
 		{Name: "fact", Args: "[path|glob]", Help: "show fact value, or list fact names", Run: (*Session).metaFact},
 		{Name: "class", Args: "[glob]", Help: "list classes", Run: (*Session).metaClass},
 		{Name: "nodes", Args: "[-r]", Help: "list known nodes, -r to refresh", Run: (*Session).metaNodes},
-		{Name: "snapshot", Args: "[fqdn]", Help: "load a node's facts/classes for completion and :fact", Run: (*Session).metaSnapshot},
+		{Name: "snapshot", Args: "[fqdn|save <f>|load <f>]", Help: "pull a node's facts/classes for completion and :fact, or save/load them", Run: (*Session).metaSnapshot},
 		{Name: "local", Args: "[facts [classes]]", Help: "evaluate locally: against files, or against the loaded snapshot", Run: (*Session).metaLocal},
 		{Name: "cluster", Help: "evaluate on the cluster", Run: (*Session).metaCluster},
 		{Name: "out", Args: "stderr|csv|json", Help: "output format for results", Run: (*Session).metaOut},
@@ -186,6 +186,33 @@ func (s *Session) metaSnapshot(args []string) error {
 	if len(args) > 0 {
 		fqdn = args[0]
 	}
+	// save/load keep a node's data around between sessions, so a fleet node can
+	// be pulled once and queried against with no cluster at hand
+	switch fqdn {
+	case "save":
+		if len(args) < 2 {
+			return fmt.Errorf("save where? :snapshot save <file>")
+		}
+		if s.snapshot == nil {
+			return fmt.Errorf("nothing loaded to save: run :snapshot <fqdn> first")
+		}
+		if err := s.snapshot.Save(args[1]); err != nil {
+			return err
+		}
+		s.printf("saved %s to %s (%s)", s.snapshot.FQDN, args[1], s.dataSummary())
+		return nil
+	case "load":
+		if len(args) < 2 {
+			return fmt.Errorf("load what? :snapshot load <file>")
+		}
+		snap, err := puppet.LoadSnapshotFile(args[1])
+		if err != nil {
+			return err
+		}
+		s.snapshot = snap
+		s.printf("loaded %s from %s: %s", snap.FQDN, snap.Source, s.dataSummary())
+		return nil
+	}
 	if len(fqdn) == 0 && s.snapshot != nil {
 		s.printf("loaded: %s from %s (%s)", s.snapshot.FQDN, s.snapshot.Source, s.dataSummary())
 		return nil
@@ -215,12 +242,12 @@ func (s *Session) metaLocal(args []string) error {
 			return err
 		}
 		s.snapshot = snap
-		h, err = snap.Harness(nil)
+		h, err = snap.Harness(s.harnessMeta(snap))
 		if err != nil {
 			return err
 		}
 	case s.snapshot != nil:
-		h, err = s.snapshot.Harness(nil)
+		h, err = s.snapshot.Harness(s.harnessMeta(s.snapshot))
 		if err != nil {
 			return err
 		}
