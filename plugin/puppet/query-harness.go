@@ -18,9 +18,9 @@ const (
 	HarnessLastRunSummaryFile = "last_run_summary.yaml"
 )
 
-// QueryHarness is a set of puppet state loaded from a directory, with query engine
-// wired up exactly like the daemon does it. Use it to check what CLI queries
-// (`rv puppet --filter ...`) would match on a node with a given set of
+// QueryHarness is a set of puppet state loaded from files or from memory, with
+// query engine wired up exactly like the daemon does it. Use it to check what CLI
+// queries (`rv puppet --filter ...`) would match on a node with a given set of
 // facts/classes. See t-data/ for an example data set
 type QueryHarness struct {
 	Facts          *Facts
@@ -28,37 +28,89 @@ type QueryHarness struct {
 	LastRunSummary LastRunSummary
 	Engine         *query.Engine
 	Runtime        *common.Runtime
-	dir            string
+	// Source describes where the data came from, for display
+	Source string
 }
 
-// NewQueryHarness loads facts/classes/last run summary from dir and registers
-// `fact` and `class` query functions on top of it.
+// HarnessOptions is a data set for the query harness. Facts and classes can come
+// either from a file or from an already loaded map/list, everything else is optional
+type HarnessOptions struct {
+	FactsPath          string
+	ClassesPath        string
+	LastRunSummaryPath string
+	// Facts/Classes are used when the matching path is empty
+	Facts   map[string]interface{}
+	Classes []string
+	// NodeMeta ends up as `node` variable in queries. When nil it is generated
+	// out of the facts (see NodeMetaFromFacts)
+	NodeMeta map[string]interface{}
+	// Source describes where the data came from, for display
+	Source string
+}
+
+// NewQueryHarness loads facts/classes/last run summary from a directory holding
+// files named the way puppet names them, and registers `fact` and `class` query
+// functions on top of it.
 //
 // nodeMeta ends up as `node` variable in queries; when nil it is generated out of
 // the loaded facts (see NodeMetaFromFacts)
 func NewQueryHarness(dir string, nodeMeta map[string]interface{}) (*QueryHarness, error) {
+	return NewQueryHarnessOpts(HarnessOptions{
+		FactsPath:          filepath.Join(dir, HarnessFactsFile),
+		ClassesPath:        filepath.Join(dir, HarnessClassfile),
+		LastRunSummaryPath: filepath.Join(dir, HarnessLastRunSummaryFile),
+		NodeMeta:           nodeMeta,
+		Source:             "dir:" + dir,
+	})
+}
+
+// NewQueryHarnessOpts builds a harness out of any combination of files and
+// in-memory data. Unlike NewQueryHarness the last run summary is optional, as
+// anyone passing facts/classes by hand is unlikely to have one
+func NewQueryHarnessOpts(o HarnessOptions) (*QueryHarness, error) {
 	var h QueryHarness
-	h.dir = dir
+	h.Source = o.Source
 	var err error
-	h.Facts, err = LoadFacts(filepath.Join(dir, HarnessFactsFile))
-	if err != nil {
-		return nil, fmt.Errorf("error loading facts: %w", err)
+	switch {
+	case len(o.FactsPath) > 0:
+		h.Facts, err = LoadFacts(o.FactsPath)
+		if err != nil {
+			return nil, fmt.Errorf("error loading facts: %w", err)
+		}
+	case o.Facts != nil:
+		h.Facts = NewFactsFromMap(o.Facts)
+	default:
+		return nil, fmt.Errorf("need either fact file path or fact data")
 	}
-	h.Classes, err = LoadClasses(filepath.Join(dir, HarnessClassfile))
-	if err != nil {
-		return nil, fmt.Errorf("error loading classes: %w", err)
+	switch {
+	case len(o.ClassesPath) > 0:
+		h.Classes, err = LoadClasses(o.ClassesPath)
+		if err != nil {
+			return nil, fmt.Errorf("error loading classes: %w", err)
+		}
+	case o.Classes != nil:
+		h.Classes = NewClassesFromList(o.Classes)
+	default:
+		// classes are optional, a query can be facts-only
+		h.Classes = NewClassesFromList(nil)
 	}
-	fd, err := os.Open(filepath.Join(dir, HarnessLastRunSummaryFile))
-	if err != nil {
-		return nil, fmt.Errorf("error opening last run summary: %w", err)
+	if len(o.LastRunSummaryPath) > 0 {
+		fd, err := os.Open(o.LastRunSummaryPath)
+		if err != nil {
+			return nil, fmt.Errorf("error opening last run summary: %w", err)
+		}
+		defer fd.Close()
+		h.LastRunSummary, err = ParseLastRunSummary(fd)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing last run summary: %w", err)
+		}
 	}
-	defer fd.Close()
-	h.LastRunSummary, err = ParseLastRunSummary(fd)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing last run summary: %w", err)
-	}
+	nodeMeta := o.NodeMeta
 	if nodeMeta == nil {
 		nodeMeta = h.NodeMetaFromFacts()
+	}
+	if len(h.Source) == 0 {
+		h.Source = o.FactsPath
 	}
 	fqdn, _ := nodeMeta["fqdn"].(string)
 	h.Runtime = &common.Runtime{

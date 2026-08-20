@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -25,7 +26,26 @@ func LoadClasses(path string) (*Classes, error) {
 	return &f, f.UpdateClasses()
 }
 
+// NewClassesFromList wraps an already loaded class list, for classes that did not
+// come from a file (a class list received from another node). UpdateClasses() on
+// it will fail as there is no path to reload from
+func NewClassesFromList(list []string) *Classes {
+	var f Classes
+	classes := make(map[string]interface{}, len(list))
+	for _, class := range list {
+		class = strings.TrimSpace(class)
+		if len(class) > 0 {
+			classes[class] = true
+		}
+	}
+	f.classes = &classes
+	return &f
+}
+
 func (f *Classes) UpdateClasses() error {
+	if len(f.path) == 0 {
+		return fmt.Errorf("no classfile path, classes were loaded from memory")
+	}
 	fd, err := os.Open(f.path)
 	if err != nil {
 		return fmt.Errorf("error opening classfile [%s]: %w", f.path, err)
@@ -53,6 +73,18 @@ func (f *Classes) UpdateClasses() error {
 	defer f.l.Unlock()
 	f.classes = &classes
 	return nil
+}
+
+// List returns sorted list of classes
+func (f *Classes) List() []string {
+	f.l.Lock()
+	defer f.l.Unlock()
+	out := make([]string, 0, len(*f.classes))
+	for class := range *f.classes {
+		out = append(out, class)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // MapGetter interface

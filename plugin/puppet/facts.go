@@ -25,7 +25,22 @@ func LoadFacts(path string) (*Facts, error) {
 	return &f, f.UpdateFacts()
 }
 
+// NewFactsFromMap wraps an already loaded fact map, for facts that did not come
+// from a file (a fact dump received from another node). UpdateFacts() on it will
+// fail as there is no path to reload from
+func NewFactsFromMap(m map[string]interface{}) *Facts {
+	var f Facts
+	if m == nil {
+		m = make(map[string]interface{}, 0)
+	}
+	f.facts = &m
+	return &f
+}
+
 func (f *Facts) UpdateFacts() error {
+	if len(f.path) == 0 {
+		return fmt.Errorf("no fact file path, facts were loaded from memory")
+	}
 	fd, err := os.Open(f.path)
 	if err != nil {
 		return fmt.Errorf("error opening fact file [%s]: %w", f.path, err)

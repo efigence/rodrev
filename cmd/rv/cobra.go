@@ -6,8 +6,11 @@ import (
 	"github.com/efigence/rodrev/cmd/rv/commands/fence"
 	"github.com/efigence/rodrev/cmd/rv/commands/ipset"
 	"github.com/efigence/rodrev/cmd/rv/commands/puppet"
+	"github.com/efigence/rodrev/cmd/rv/commands/query"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
+	"time"
 )
 
 // Root
@@ -68,6 +71,24 @@ var puppetFactCmd = &cobra.Command{
 	Use:   "fact",
 	Short: "show fact value",
 	Run:   puppet.Fact,
+}
+
+var queryCmd = &cobra.Command{
+	Use:     "query [expression]",
+	Aliases: []string{"q"},
+	Short:   "interactive REPL for testing filter expressions (rv puppet --filter)",
+	Long: "Interactive REPL for building and testing query/filter expressions.\n" +
+		"By default queries are sent to the cluster and matching nodes are listed;\n" +
+		"pass --facts/--classes (or --data-dir) to evaluate them locally instead.\n" +
+		"Use :help for commands and :syntax for the query language.",
+	Example: "  " + strings.Join([]string{
+		`query                                                  interactive, on the cluster`,
+		`query '(== (class "nginx") true)'                       one shot, exit 0 when something matched`,
+		`query -o json -e '(== (fact "virtual") "kvm")'          machine readable`,
+		`query --data-dir t-data                                 offline, against example data`,
+		`query --facts /var/lib/puppet/facts.yaml --classes /var/lib/puppet/state/classes.txt`,
+	}, "\n  "),
+	Run: query.Query,
 }
 
 // Status
@@ -213,6 +234,53 @@ func cobraInitFlags() {
 		"",
 		"hostname",
 	)
+	//
+	queryCmd.Flags().StringArrayP(
+		"eval",
+		"e",
+		[]string{},
+		"evaluate expression (or :command) and exit. Can be repeated",
+	)
+	queryCmd.Flags().String(
+		"facts",
+		"",
+		"facts.yaml to use. Implies local evaluation; in cluster mode it only feeds completion and :fact",
+	)
+	queryCmd.Flags().String(
+		"classes",
+		"",
+		"classes.txt to use. Implies local evaluation",
+	)
+	queryCmd.Flags().String(
+		"last-run-summary",
+		"",
+		"last_run_summary.yaml to use (optional)",
+	)
+	queryCmd.Flags().String(
+		"data-dir",
+		"",
+		"directory with facts.yaml/classes.txt/last_run_summary.yaml. Implies local evaluation",
+	)
+	queryCmd.Flags().Bool(
+		"local",
+		false,
+		"evaluate locally, never connect to the MQ",
+	)
+	queryCmd.Flags().Duration(
+		"timeout",
+		time.Second*3,
+		"how long to wait for query results",
+	)
+	queryCmd.Flags().String(
+		"history",
+		cobraDefaultString("RV_QUERY_HISTORY", ""),
+		"query history file (default: ~/.rv_query_history)",
+	)
+	queryCmd.Flags().Bool(
+		"no-history",
+		false,
+		"do not read or write the query history file",
+	)
 }
 func cobraInitCommands() {
 	rootCmd.AddCommand(downtimeCmd)
@@ -230,4 +298,5 @@ func cobraInitCommands() {
 	ipsetCmd.AddCommand(ipsetAddCmd)
 	ipsetCmd.AddCommand(ipsetDeleteCmd)
 	rootCmd.AddCommand(ipsetCmd)
+	rootCmd.AddCommand(queryCmd)
 }

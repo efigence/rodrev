@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/glycerine/zygomys/zygo"
 	"regexp"
+	"sort"
 	"strconv"
+	"sync"
 )
 
 func FuzzyCompareFunction(env *zygo.Zlisp, name string, args []zygo.Sexp) (zygo.Sexp, error) {
@@ -141,4 +143,31 @@ func HashGet(hash *map[string]interface{}) func(env *zygo.Zlisp, name string, ar
 		return out, nil
 
 	}
+}
+
+var completionsOnce sync.Once
+var completionsCache []string
+
+// zygoSpecialForms are the ones useful in a query. They are handled by the
+// compiler rather than being functions, so AllBuiltinFunctions() does not
+// know about them
+var zygoSpecialForms = []string{"and", "or", "cond", "let", "begin"}
+
+// Completions returns names of functions and globals usable in a query: zygo
+// builtins plus the ones rodrev adds (`regexp`, `regex`, `node`). Data functions
+// are per-engine, get those from Engine.DataMaps()
+func Completions() []string {
+	completionsOnce.Do(func() {
+		names := make([]string, 0, 128)
+		for name := range zygo.AllBuiltinFunctions() {
+			names = append(names, name)
+		}
+		names = append(names, zygoSpecialForms...)
+		names = append(names, "regexp", "regex", "node")
+		sort.Strings(names)
+		completionsCache = names
+	})
+	out := make([]string, len(completionsCache))
+	copy(out, completionsCache)
+	return out
 }

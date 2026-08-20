@@ -22,7 +22,22 @@ const (
 	OutJson   = "json"
 )
 
+// Init loads config, connects to the MQ and returns a runtime ready for use.
+// It panics when there is no usable config or the broker can not be reached
 func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger) {
+	cfg, log := initConfig(cmd, false)
+	runtime := connect(cmd, cfg, log)
+	return cfg, runtime, log
+}
+
+// InitOffline loads config and logger the same way Init does and validates
+// output format, but never connects to the MQ and does not panic when there is
+// no config file. For commands that can do useful work without a cluster
+func InitOffline(cmd *cobra.Command) (config.Config, *zap.SugaredLogger) {
+	return initConfig(cmd, true)
+}
+
+func initConfig(cmd *cobra.Command, offline bool) (config.Config, *zap.SugaredLogger) {
 	c := cmd.Flags()
 	cfgFiles := []string{
 		"$HOME/.config/rodrev/client.conf",
@@ -47,14 +62,27 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 	cfg.Logger = log
 	err = yamlcfg.LoadConfig(cfgFiles, &cfg)
 
-	if err != nil {
+	if err != nil && !offline {
 		url, err := c.GetString("mqtt-url")
 		if url == "" || err != nil {
 			log.Errorf("error loading config and no cmdline mq url: ", err)
 		}
 	}
 	common.MergeCliConfig(&cfg, cmd)
+	outputMode := util.StringOrPanic(c.GetString("output-format"))
+	outputModeRe := regexp.MustCompile(
+		"^" +
+			strings.Join([]string{OutCsv, OutJson, OutStderr}, "|") +
+			"$")
+	if !outputModeRe.MatchString(outputMode) {
+		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
+	}
+	return cfg, log
+}
 
+func connect(cmd *cobra.Command, cfg config.Config, log *zap.SugaredLogger) common.Runtime {
+	c := cmd.Flags()
+	debug := util.BoolOrPanic(c.GetBool("debug"))
 	tr := zerosvc.NewTransport(
 		zerosvc.TransportMQTT,
 		cfg.MQAddress,
@@ -65,7 +93,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 	nodename := "rf-client-" + host
 	node := zerosvc.NewNode(nodename, uuid.NewV4().String())
 	log.Debugf("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
-	err = tr.Connect()
+	err := tr.Connect()
 	if err != nil {
 		log.Panicf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
 	}
@@ -84,7 +112,7 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 	} else {
 		log.Infof("config: %s, cert: %s", cfg.GetConfigPath(), certname)
 	}
-	runtime := common.Runtime{
+	return common.Runtime{
 		Node: node,
 		// TODO load from cert if possible
 		FQDN:     util.GetFQDN(),
@@ -94,17 +122,8 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime, *zap.SugaredLogger
 		Debug:    debug,
 		Cfg:      cfg,
 	}
-	outputMode := util.StringOrPanic(c.GetString("output-format"))
-	outputModeRe := regexp.MustCompile(
-		"^" +
-			strings.Join([]string{OutCsv, OutJson, OutStderr}, "|") +
-			"$")
-	if !outputModeRe.MatchString(outputMode) {
-		log.Panicf("output-format [%s] must match %s", outputMode, outputModeRe)
-	}
-	return cfg, runtime, log
-
 }
+
 func InitLog(debug, quiet bool) *zap.SugaredLogger {
 	consoleEncoderConfig := zap.NewDevelopmentEncoderConfig()
 	// naive systemd detection. Drop timestamp if running under it
