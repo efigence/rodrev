@@ -48,6 +48,10 @@ func NewDowntimeServer(cfg Config) (*DowntimeServer, error) {
 	s.l.Infof("icinga2 api started, found [%d] hosts", len(hosts))
 	return s, nil
 }
+
+// maxDowntime is the longest downtime a host may ask for
+const maxDowntime = time.Hour * 24 * 60
+
 func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 	for ev := range ch {
 		downtime := DowntimeRequest{}
@@ -56,35 +60,17 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 			d.l.Warnf("wrong downtime message [%w]:%s", err, string(ev.Body))
 			continue
 		}
-		if len(downtime.Host) < 1 || downtime.Duration <= 0 || downtime.Duration >= time.Hour*24*60 {
-			d.l.Warnf("need hostname and duration shorter than 2 months [%+v]", downtime)
+		downtime, err = ValidateRequest(downtime, ev.RoutingKey)
+		if err != nil {
+			d.l.Errorf("ignoring downtime request from [%s]: %s", ev.RoutingKey, err)
 			continue
-		}
-		hostFromRoute := ""
-		route := strings.Split(ev.RoutingKey, "/")
-		if len(route) > 0 {
-			h := strings.Split(route[len(route)-1], ".")
-			if len(h) > 0 {
-				hostFromRoute = strings.TrimPrefix(h[0], "client_")
-
-			}
-
-		}
-		if hostFromRoute != downtime.Host {
-			d.l.Errorf("host from route [%s/%s] does not match requested host[%s]. Host is only allowed to downtime itself", ev.RoutingKey, hostFromRoute, downtime.Host)
-			continue
-		}
-		downtime.Reason = strings.TrimSpace(downtime.Reason)
-		// downtime reason can't be empty, else api fails
-		if len(downtime.Reason) == 0 {
-			downtime.Reason = "not specified"
 		}
 		hosts, err := d.api.ScheduleHostDowntime(downtime.Host, icinga2.Downtime{
 			Flexible:      false,
 			Start:         time.Now(),
 			End:           time.Now().Add(downtime.Duration),
 			NoAllServices: false,
-			Author:        ev.NodeName(),
+			Author:        ev.NodeName,
 			Comment:       downtime.Reason,
 		})
 		if err != nil {
@@ -95,4 +81,40 @@ func (d *DowntimeServer) Run(ch chan zerosvc.Event) {
 			d.l.Infof("downtimed [%+v]", hosts)
 		}
 	}
+}
+
+// ValidateRequest checks a downtime request against the topic it arrived on and
+// fills in what the API insists on having.
+//
+// A host may only downtime itself, and the only trustworthy statement of who
+// sent a request is the topic it was published to
+func ValidateRequest(req DowntimeRequest, routingKey string) (DowntimeRequest, error) {
+	if len(req.Host) < 1 {
+		return req, fmt.Errorf("no hostname in request [%+v]", req)
+	}
+	if req.Duration <= 0 {
+		return req, fmt.Errorf("downtime duration has to be positive, got %s", req.Duration)
+	}
+	if req.Duration >= maxDowntime {
+		return req, fmt.Errorf("downtime duration %s is longer than the %s limit", req.Duration, maxDowntime)
+	}
+	if host := HostFromRoutingKey(routingKey); host != req.Host {
+		return req, fmt.Errorf("host from route [%s] does not match requested host [%s], "+
+			"a host is only allowed to downtime itself", host, req.Host)
+	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	// the api rejects an empty comment
+	if len(req.Reason) == 0 {
+		req.Reason = "not specified"
+	}
+	return req, nil
+}
+
+// HostFromRoutingKey returns the short hostname of whoever published to a topic.
+// Requests arrive on <prefix>downtime/<certname>, where the certname may be a
+// fqdn and may carry a client_ prefix
+func HostFromRoutingKey(routingKey string) string {
+	route := strings.Split(routingKey, "/")
+	last := route[len(route)-1]
+	return strings.TrimPrefix(strings.Split(last, ".")[0], "client_")
 }

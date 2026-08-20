@@ -5,13 +5,12 @@ import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/util"
-	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
-	"github.com/zerosvc/go-zerosvc"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
@@ -47,21 +46,18 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	quiet = util.BoolOrPanic(c.GetBool("quiet"))
 	InitLog()
 
-	tr := zerosvc.NewTransport(
-		zerosvc.TransportMQTT,
-		cfg.MQAddress,
-		zerosvc.TransportMQTTConfig{},
-	)
-
 	host, _ := os.Hostname()
 	nodename := "rf-client-" + host
-	node := zerosvc.NewNode(nodename, uuid.NewV4().String())
 	log.Debugf("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
-	err = tr.Connect()
+	node, tr, err := common.NewNode(cfg, common.NodeConfig{
+		Name:              nodename,
+		ID:                nodename + "-" + common.RandomToken(4),
+		HeartbeatInterval: time.Hour,
+		Logger:            log,
+	})
 	if err != nil {
-		log.Panicf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
+		log.Panicf("%s", err)
 	}
-	node.SetTransport(tr)
 	certname := ""
 	if len(cfg.ClientCert) > 0 {
 		cert, err := ioutil.ReadFile(cfg.ClientCert)
@@ -77,7 +73,8 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 		log.Infof("config: %s, cert: %s", cfg.GetConfigPath(), certname)
 	}
 	runtime := common.Runtime{
-		Node: node,
+		Node:      node,
+		Transport: tr,
 		// TODO load from cert if possible
 		FQDN:     util.GetFQDN(),
 		Certname: certname,

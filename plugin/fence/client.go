@@ -27,8 +27,7 @@ func Send(r *common.Runtime, node string) error {
 		Node:     node,
 	})
 	cmd.ReplyTo = replyPath
-	cmd.Prepare()
-	err = cmd.Send(r.MQPrefix + "fence/" + node)
+	err = r.Node.SendEvent("fence/"+node, cmd)
 	if err != nil {
 		return fmt.Errorf("error sending fence request: %s", err)
 	}
@@ -58,8 +57,7 @@ func Status(r *common.Runtime, node string) (ok bool, err error) {
 		Node:     node,
 	})
 	cmd.ReplyTo = replyPath
-	cmd.Prepare()
-	err = cmd.Send(r.MQPrefix + "fence/" + node)
+	err = r.Node.SendEvent("fence/"+node, cmd)
 	if err != nil {
 		return false, fmt.Errorf("error sending status request: %s", err)
 	}

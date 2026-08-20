@@ -66,7 +66,6 @@ func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duratio
 		r.Log.Errorf("error getting reply channel: %s", err)
 		return nil
 	}
-	defer close(replyCh)
 	query := r.Node.NewEvent()
 	r.UnlikelyErr(query.Marshal(puppet.PuppetCmdSend{
 		Command:    puppet.Run,
@@ -76,9 +75,9 @@ func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duratio
 
 	query.ReplyTo = replyPath
 	if node == "all" {
-		err = query.Send(r.MQPrefix + "puppet")
+		err = r.Node.SendEvent("puppet", query)
 	} else {
-		err = query.Send(r.MQPrefix + "puppet" + "/" + node)
+		err = r.Node.SendEvent("puppet/"+node, query)
 	}
 	if err != nil {
 		r.Log.Errorf("err sending: %s", err)

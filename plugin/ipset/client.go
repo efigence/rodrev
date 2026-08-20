@@ -18,8 +18,7 @@ func Cmd(r *common.Runtime, command Command, group string, ipset string, addr st
 		IPSet: ipset,
 	})
 	cmd.ReplyTo = replyPath
-	cmd.Prepare()
-	err = cmd.Send(r.MQPrefix + "ipset/" + group + "/" + ipset)
+	err = r.Node.SendEvent("ipset/"+group+"/"+ipset, cmd)
 	if err != nil {
 		return fmt.Errorf("error sending ipset request: %s", err)
 	}

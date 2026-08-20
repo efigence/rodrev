@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 	"github.com/efigence/rodrev/config"
-	"github.com/efigence/rodrev/util"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"log"
@@ -14,9 +14,14 @@ import (
 )
 
 type Runtime struct {
-	Node     *zerosvc.Node
-	FQDN     string
-	Certname string
+	Node *zerosvc.Node
+	// Transport is the connection the node runs on. Heartbeats are plain JSON
+	// rather than events, so reading those goes around the node
+	Transport zerosvc.Transport
+	FQDN      string
+	Certname  string
+	// MQPrefix is the topic root. The node prefixes event paths with it on its
+	// own, so it is only needed for raw subscriptions
 	MQPrefix string
 	Cfg      config.Config
 	Metadata map[string]interface{}
@@ -24,12 +29,39 @@ type Runtime struct {
 	Debug    bool
 }
 
-// GetReplyChan() returns randomly generated channel for replies
+// GetReplyChan returns a channel for replies plus the path to put in an event's
+// ReplyTo. Everything below the path is subscribed as well, so one channel can
+// serve many requests told apart by the topic they arrived on
 func (r *Runtime) GetReplyChan() (path string, replyCh chan zerosvc.Event, err error) {
-	id := MapBytesToTopicTitle(r.RngBlob(16))
-	path = r.MQPrefix + "reply/" + util.GetFQDN() + "/" + id
-	rspCh, err := r.Node.GetEventsCh(path + "/#")
-	return path, rspCh, err
+	return r.Node.GetReplyChan()
+}
+
+// SubscribeRaw subscribes to a topic under the MQ prefix and returns the
+// messages as they come, undecoded. Needed for heartbeats, which are not events
+func (r *Runtime) SubscribeRaw(topic string) (chan *zerosvc.Message, error) {
+	if r.Transport == nil {
+		return nil, fmt.Errorf("no transport, this runtime can not subscribe")
+	}
+	// buffered: the transport hands messages over from its own reader, and a
+	// subscription that blocks stalls the whole client
+	ch := make(chan *zerosvc.Message, 256)
+	err := r.Transport.Subscribe(EventRoot(r.MQPrefix)+"/"+topic, ch)
+	if err != nil {
+		return nil, err
+	}
+	return ch, nil
+}
+
+// Reply answers an event. It keeps the correlation id, so a client running
+// several requests over one reply channel can tell the answers apart
+func (r *Runtime) Reply(ev *zerosvc.Event, reply zerosvc.Event) error {
+	if len(ev.ReplyTo) == 0 {
+		return fmt.Errorf("no reply-to in event, can not answer it")
+	}
+	if id, ok := ev.Headers["correlation-id"]; ok {
+		reply.Headers["correlation-id"] = id
+	}
+	return r.Node.SendEvent(ev.ReplyTo, reply)
 }
 
 func (r *Runtime) RngBlob(bytes int) []byte {
