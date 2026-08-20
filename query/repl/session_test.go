@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -405,4 +406,121 @@ func TestInterruptResult(t *testing.T) {
 			assert.Equal(t, tt.want, interruptResult(tt.line))
 		})
 	}
+}
+
+func TestParseNodeMeta(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		want    map[string]interface{}
+		wantErr bool
+	}{
+		{name: "none", args: nil},
+		{name: "one", args: []string{"site=dc2"}, want: map[string]interface{}{"site": "dc2"}},
+		{
+			name: "several", args: []string{"site=dc2", "fqdn=other.example.com"},
+			want: map[string]interface{}{"site": "dc2", "fqdn": "other.example.com"},
+		},
+		{name: "value with an equals sign", args: []string{"a=b=c"}, want: map[string]interface{}{"a": "b=c"}},
+		{name: "empty value is allowed", args: []string{"site="}, want: map[string]interface{}{"site": ""}},
+		{name: "no equals sign", args: []string{"site"}, wantErr: true},
+		{name: "no key", args: []string{"=dc2"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseNodeMeta(tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// --node-meta overrides what the facts say, and keeps the rest of it
+func TestNodeMetaOverride(t *testing.T) {
+	snap, err := puppet.LoadSnapshotFiles(testDataDir+"/"+puppet.HarnessFactsFile, "", "")
+	require.NoError(t, err)
+	h, err := snap.Harness(map[string]interface{}{"site": "dc2"})
+	require.NoError(t, err)
+	var out bytes.Buffer
+	s, err := New(Config{
+		Backend:  NewLocalBackend(h),
+		Snapshot: snap,
+		NodeMeta: map[string]interface{}{"site": "dc2"},
+		Out:      &out,
+	})
+	require.NoError(t, err)
+	require.NoError(t, s.EvalLine(`(== (-> node %site) "dc2")`))
+	assert.Contains(t, out.String(), "=> true")
+
+	// :local rebuilds the harness and has to keep the override, while the
+	// generated entries survive too
+	out.Reset()
+	require.NoError(t, s.EvalLine(":local"))
+	require.NoError(t, s.EvalLine(`(and (== (-> node %site) "dc2") (== (-> node %fqdn) "d1-lg.example.com"))`))
+	assert.Contains(t, out.String(), "=> true")
+}
+
+// a snapshot can be saved and picked up again later, which is how a fleet node's
+// data gets queried with no cluster at hand
+func TestSnapshotSaveLoad(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "node.json")
+	s, out := testSession(t, FormatHuman)
+	require.NoError(t, s.EvalLine(":snapshot save "+path))
+	assert.Contains(t, out.String(), "saved d1-lg.example.com to "+path)
+	assert.FileExists(t, path)
+
+	// a fresh session with no data of its own can load it
+	var out2 bytes.Buffer
+	fresh, err := New(Config{Backend: &fakeBackend{}, Out: &out2})
+	require.NoError(t, err)
+	require.NoError(t, fresh.EvalLine(":fact virtual"))
+	assert.Contains(t, out2.String(), "no fact data loaded")
+	out2.Reset()
+	require.NoError(t, fresh.EvalLine(":snapshot load "+path))
+	assert.Contains(t, out2.String(), "loaded d1-lg.example.com")
+	out2.Reset()
+	require.NoError(t, fresh.EvalLine(":fact virtual"))
+	assert.Contains(t, out2.String(), "virtual: kvm")
+	// and evaluate against it locally
+	out2.Reset()
+	require.NoError(t, fresh.EvalLine(":local"))
+	require.NoError(t, fresh.EvalLine(`(== (class "nginx") true)`))
+	assert.Contains(t, out2.String(), "=> true")
+}
+
+func TestSnapshotSaveLoadErrors(t *testing.T) {
+	dir := t.TempDir()
+	tests := []struct {
+		name     string
+		lines    []string
+		contains string
+	}{
+		{name: "save with no path", lines: []string{":snapshot save"}, contains: "save where?"},
+		{name: "load with no path", lines: []string{":snapshot load"}, contains: "load what?"},
+		{name: "load a missing file", lines: []string{":snapshot load " + filepath.Join(dir, "nope.json")},
+			contains: "error reading snapshot"},
+		{name: "save to an unwritable place", lines: []string{":snapshot save /proc/nope/node.json"},
+			contains: "error saving snapshot"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, out := testSession(t, FormatHuman)
+			for _, line := range tt.lines {
+				require.NoError(t, s.EvalLine(line))
+			}
+			assert.Contains(t, out.String(), tt.contains)
+		})
+	}
+	t.Run("save with nothing loaded", func(t *testing.T) {
+		var out bytes.Buffer
+		s, err := New(Config{Backend: &fakeBackend{}, Out: &out})
+		require.NoError(t, err)
+		require.NoError(t, s.EvalLine(":snapshot save "+filepath.Join(dir, "x.json")))
+		assert.Contains(t, out.String(), "nothing loaded to save")
+	})
 }

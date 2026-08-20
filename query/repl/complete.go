@@ -1,6 +1,8 @@
 package repl
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -15,6 +17,35 @@ type CompletionState struct {
 	Nodes    []string
 	NodeMeta map[string]interface{}
 	Formats  []string
+	// Files completes a filesystem path. Nil disables path completion
+	Files func(prefix string) []string
+}
+
+// paths completes a filesystem path, if the session gave us a way to
+func (st *CompletionState) paths(prefix string) []string {
+	if st.Files == nil {
+		return nil
+	}
+	return st.Files(prefix)
+}
+
+// GlobPaths completes filesystem paths, with a trailing slash on directories so
+// the next segment can be typed right away
+func GlobPaths(prefix string) []string {
+	matches, err := filepath.Glob(prefix + "*")
+	if err != nil {
+		return nil
+	}
+	sort.Strings(matches)
+	out := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if st, err := os.Stat(match); err == nil && st.IsDir() {
+			out = append(out, match+string(os.PathSeparator))
+			continue
+		}
+		out = append(out, match+" ")
+	}
+	return out
 }
 
 // tokenBreak are the characters that end a symbol in a query
@@ -60,7 +91,18 @@ func completeMeta(st CompletionState, left string) (string, []string) {
 	head := left[:len(left)-len(partial)]
 	switch cmd.Name {
 	case "snapshot":
-		return head, spaceAll(withPrefix(st.Nodes, partial))
+		// :snapshot save <file> / load <file>
+		if len(fields) > 1 {
+			switch fields[1] {
+			case "save", "load":
+				if len(fields) > 2 || endsWithSpace(left) {
+					return head, st.paths(partial)
+				}
+			}
+		}
+		return head, spaceAll(withPrefix(append([]string{"save", "load"}, st.Nodes...), partial))
+	case "local":
+		return head, st.paths(partial)
 	case "out":
 		return head, spaceAll(withPrefix(st.Formats, partial))
 	case "fact":
@@ -226,6 +268,7 @@ func (s *Session) CompletionState() CompletionState {
 		Funcs:   s.queryFuncs(),
 		Nodes:   s.nodes,
 		Formats: []string{FormatHuman, FormatCSV, FormatJSON},
+		Files:   GlobPaths,
 	}
 	if s.snapshot != nil {
 		st.Facts = s.snapshot.Facts

@@ -53,6 +53,7 @@ There is few added functions and global variables:
 ### Examples
 
 * `rv --out=csv puppet --filter '(== (class "systemd::common") true)'  status` - list puppet nodes containing that class
+* `rv query` - try a filter expression out before using it with `--filter` (see below)
 
 ### rv query - interactive query REPL
 
@@ -77,6 +78,15 @@ apt_has_updates: true
 TAB completes meta commands, query functions, fact paths (`(fact "os" "distro" "<TAB>`)
 and class names; queries are checked for syntax locally before being sent to the fleet, and
 history is kept in `~/.rv_query_history` (`--history`, `--no-history`).
+
+`--snapshot <fqdn>` pulls that node's data at startup, so completion works from the first
+prompt in cluster mode. `--node-meta key=value` (repeatable) overrides entries of the `node`
+variable, for checking what a query would do on a node with different metadata.
+
+A snapshot can be kept: `:snapshot save prod-node.json` writes it out (mode 0600 - facts
+describe a host in detail), `:snapshot load prod-node.json` reads it back, and
+`rv query --snapshot-file prod-node.json` starts a local session against it. Pull one node
+once, then iterate on queries with no cluster at hand.
 
 Ctrl-C throws away the line being typed, or exits when there is nothing to throw away, so
 pressing it twice always gets you out; Ctrl-D and `:quit` exit as well. Ctrl-C while a query

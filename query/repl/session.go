@@ -43,6 +43,9 @@ type Config struct {
 	// Snapshot is fact/class data for completion and :fact/:class, when the
 	// caller already has it (local mode always does)
 	Snapshot *puppet.Snapshot
+	// NodeMeta overrides entries of the `node` variable for local evaluation.
+	// Whatever is not given is generated out of the facts
+	NodeMeta map[string]interface{}
 	// NewCluster switches to cluster mode on :cluster. Nil disables the command
 	NewCluster func() (Backend, error)
 	// Interactive enables the banner, prompt and SIGINT handling
@@ -62,6 +65,7 @@ type Session struct {
 	format      string
 	timeout     time.Duration
 	snapshot    *puppet.Snapshot
+	nodeMeta    map[string]interface{}
 	nodes       []string
 	interactive bool
 	verbose     bool
@@ -97,6 +101,7 @@ func New(cfg Config) (*Session, error) {
 		format:      cfg.Format,
 		timeout:     cfg.Timeout,
 		snapshot:    cfg.Snapshot,
+		nodeMeta:    cfg.NodeMeta,
 		interactive: cfg.Interactive,
 		verbose:     cfg.Verbose,
 		quiet:       cfg.Quiet,
@@ -323,6 +328,44 @@ func (s *Session) queryFuncs() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// ParseNodeMeta turns key=value arguments into node metadata
+func ParseNodeMeta(args []string) (map[string]interface{}, error) {
+	if len(args) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]interface{}, len(args))
+	for _, arg := range args {
+		key, value, found := strings.Cut(arg, "=")
+		key = strings.TrimSpace(key)
+		if !found || len(key) == 0 {
+			return nil, fmt.Errorf("node metadata has to be key=value, got [%s]", arg)
+		}
+		out[key] = value
+	}
+	return out, nil
+}
+
+// harnessMeta is the node metadata to build a local harness with. Nil lets the
+// harness generate it out of the facts
+func (s *Session) harnessMeta(snap *puppet.Snapshot) map[string]interface{} {
+	if len(s.nodeMeta) == 0 {
+		return nil
+	}
+	// start from what the facts say, then apply the overrides
+	base := make(map[string]interface{}, len(s.nodeMeta)+4)
+	if snap != nil {
+		if h, err := snap.Harness(nil); err == nil {
+			for k, v := range h.Runtime.Cfg.NodeMeta {
+				base[k] = v
+			}
+		}
+	}
+	for k, v := range s.nodeMeta {
+		base[k] = v
+	}
+	return base
 }
 
 // SetInteractive enables the banner, prompt and Ctrl-C handling. Set it before
