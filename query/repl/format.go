@@ -53,8 +53,10 @@ func (s *Session) printQueryHuman(sum Summary, results []NodeResult) error {
 	for _, line := range collapseErrors(results) {
 		s.printf("  ! %s", line)
 	}
-	// a single-node result is more useful as a value than as a count
-	if sum.Known == 1 && sum.Responded == 1 && len(results) == 1 {
+	// a single-node result is more useful as a value than as a count, but only a
+	// backend that evaluated the query itself knows what it returned - the
+	// cluster only ever reports booleans
+	if len(sum.Type) > 0 && sum.Known == 1 && sum.Responded == 1 && len(results) == 1 {
 		r := results[0]
 		if len(r.Err) > 0 {
 			return nil

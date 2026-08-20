@@ -9,6 +9,7 @@ require (
 	github.com/efigence/go-icinga2 v0.2.0
 	github.com/efigence/go-ipset v0.0.2
 	github.com/efigence/go-mon v1.4.1
+	github.com/fxamacker/cbor/v2 v2.8.0
 	github.com/gin-contrib/zap v0.2.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/glycerine/zygomys v5.1.2+incompatible
@@ -17,7 +18,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.10.0
-	github.com/zerosvc/go-zerosvc v1.2.1
+	github.com/zerosvc/go-zerosvc v1.2.2
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -32,7 +33,6 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.5.0 // indirect
 	github.com/efigence/go-libs/ewma v0.0.1 // indirect
 	github.com/efigence/go-monitoring v0.0.3 // indirect
-	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
