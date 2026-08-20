@@ -7,12 +7,16 @@ import (
 
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/plugin/puppet"
-	"github.com/zerosvc/go-zerosvc"
 )
 
 // DefaultQueryTimeout is used when a context has no deadline of its own. It
-// matches how long PuppetStatus has always waited for replies
-const DefaultQueryTimeout = time.Second * 4
+// matches how long PuppetStatus has always waited for replies.
+//
+// A broadcast never learns how many nodes are going to answer, so a call has
+// nothing to wait for but the clock, which makes this the floor on how long one
+// takes. It is a var so tests can shorten it; anything else should pass a
+// context with its own deadline instead of changing it
+var DefaultQueryTimeout = time.Second * 4
 
 // FilterOutcome is who answered a filtered request
 type FilterOutcome struct {
@@ -163,24 +167,6 @@ func PuppetFactStream(ctx context.Context, s *Session, factName, filter string,
 		return true
 	})
 	return facts, coverage, err
-}
-
-// drainFor keeps a channel drained for a while, then gives up on it. Anything
-// arriving after that panics inside the zerosvc handler, which recovers and
-// unsubscribes - the only cleanup the library offers
-func drainFor(ch chan zerosvc.Event, d time.Duration) {
-	deadline := time.After(d)
-	for {
-		select {
-		case _, ok := <-ch:
-			if !ok {
-				return
-			}
-		case <-deadline:
-			close(ch)
-			return
-		}
-	}
 }
 
 // oneFilter keeps the variadic filter argument the old API uses

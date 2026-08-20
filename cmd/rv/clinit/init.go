@@ -5,15 +5,14 @@ import (
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/config"
 	"github.com/efigence/rodrev/util"
-	uuid "github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
-	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -83,21 +82,24 @@ func initConfig(cmd *cobra.Command, offline bool) (config.Config, *zap.SugaredLo
 func connect(cmd *cobra.Command, cfg config.Config, log *zap.SugaredLogger) common.Runtime {
 	c := cmd.Flags()
 	debug := util.BoolOrPanic(c.GetBool("debug"))
-	tr := zerosvc.NewTransport(
-		zerosvc.TransportMQTT,
-		cfg.MQAddress,
-		zerosvc.TransportMQTTConfig{},
-	)
-
 	host, _ := os.Hostname()
 	nodename := "rf-client-" + host
-	node := zerosvc.NewNode(nodename, uuid.NewV4().String())
 	log.Debugf("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
-	err := tr.Connect()
+	node, tr, err := common.NewNode(cfg, common.NodeConfig{
+		Name: nodename,
+		// the name (and with it the uuid derived from it) stays the same across
+		// runs so a client reuses one presence topic instead of leaving a new
+		// retained message behind every time, while the MQTT client id has to be
+		// unique or two clients on one host kick each other off the broker
+		ID: nodename + "-" + common.RandomToken(4),
+		// a client is not part of the fleet, it only announces itself so its
+		// retained presence is cleared when it disconnects
+		HeartbeatInterval: time.Hour,
+		Logger:            log,
+	})
 	if err != nil {
-		log.Panicf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
+		log.Panicf("%s", err)
 	}
-	node.SetTransport(tr)
 	certname := ""
 	if len(cfg.ClientCert) > 0 {
 		cert, err := ioutil.ReadFile(cfg.ClientCert)
@@ -113,7 +115,8 @@ func connect(cmd *cobra.Command, cfg config.Config, log *zap.SugaredLogger) comm
 		log.Infof("config: %s, cert: %s", cfg.GetConfigPath(), certname)
 	}
 	return common.Runtime{
-		Node: node,
+		Node:      node,
+		Transport: tr,
 		// TODO load from cert if possible
 		FQDN:     util.GetFQDN(),
 		Certname: certname,
