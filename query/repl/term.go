@@ -6,8 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/glycerine/liner"
+	"github.com/chzyer/readline"
 )
+
+// historyLimit is how many lines are kept in the history file
+const historyLimit = 1000
 
 // DefaultHistoryFile returns the history file path in the user's home dir
 func DefaultHistoryFile() string {
@@ -18,118 +21,131 @@ func DefaultHistoryFile() string {
 	return filepath.Join(home, ".rv_query_history")
 }
 
-// TerminalSupported reports whether stdin is a terminal liner can drive
-func TerminalSupported() bool { return liner.TerminalSupported() }
-
-// termReader is a liner-backed LineReader with history and tab completion.
+// termReader is a readline-backed LineReader with history and tab completion.
 // This is the only part of the REPL that needs a terminal
 type termReader struct {
-	l           *liner.State
+	l           *readline.Instance
 	historyFile string
-	log         logf
+	log         func(format string, args ...interface{})
 }
 
-type logf func(format string, args ...interface{})
-
-// NewTermReader wires liner up to the session's completer and history file.
-// An empty historyFile disables history persistence
-func NewTermReader(s *Session, historyFile string) LineReader {
-	l := liner.NewLiner()
-	l.SetCtrlCAborts(true)
-	l.SetTabCompletionStyle(liner.TabPrints)
-	l.SetWordCompleter(func(line string, pos int) (string, []string, string) {
-		return Complete(s.CompletionState(), line, pos)
-	})
-	t := termReader{
-		l:           l,
-		historyFile: historyFile,
-		log:         s.log.Debugf,
+// NewTermReader wires the line editor up to the session's completer and history
+// file. An empty historyFile disables history persistence
+func NewTermReader(s *Session, historyFile string) (LineReader, error) {
+	if len(historyFile) > 0 {
+		// queries carry hostnames and fact values, so make sure the file is
+		// private before the editor starts appending to it
+		if err := ensurePrivateFile(historyFile); err != nil {
+			s.log.Debugf("not using query history: %s", err)
+			historyFile = ""
+		}
 	}
-	t.readHistory()
-	return &t
+	l, err := readline.NewEx(&readline.Config{
+		Prompt:            s.Prompt(),
+		HistoryFile:       historyFile,
+		HistoryLimit:      historyLimit,
+		HistorySearchFold: true,
+		AutoComplete:      &completer{session: s},
+		InterruptPrompt:   "^C",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &termReader{l: l, historyFile: historyFile, log: s.log.Debugf}, nil
 }
 
 func (t *termReader) Prompt(prompt string) (string, error) {
-	line, err := t.l.Prompt(prompt)
+	t.l.SetPrompt(prompt)
+	line, err := t.l.Readline()
 	switch err {
 	case nil:
-	case liner.ErrPromptAborted:
-		return "", ErrInterrupted
-	case liner.ErrNotTerminalOutput:
-		return "", ErrNoTerminal
+		return line, nil
+	case readline.ErrInterrupt:
+		// Ctrl-C throws away what was typed. With nothing to throw away it means
+		// "get me out of here"
+		return "", interruptResult(line)
 	case io.EOF:
 		return "", io.EOF
 	default:
 		return "", err
 	}
-	if len(strings.TrimSpace(line)) > 0 {
-		// liner drops consecutive duplicates and caps at liner.HistoryLimit
-		t.l.AppendHistory(line)
+}
+
+// interruptResult turns a Ctrl-C into either "the line is gone, carry on" or
+// "the line was already empty, so exit"
+func interruptResult(line string) error {
+	if len(strings.TrimSpace(line)) == 0 {
+		return io.EOF
 	}
-	return line, nil
+	return ErrInterrupted
 }
 
 func (t *termReader) Close() error {
-	t.writeHistory()
-	return t.l.Close()
+	err := t.l.Close()
+	if len(t.historyFile) > 0 {
+		// the editor rewrites the history file when trimming it, with default
+		// permissions
+		if err := ensurePrivateFile(t.historyFile); err != nil {
+			t.log("could not keep query history private: %s", err)
+		}
+	}
+	return err
 }
 
-func (t *termReader) readHistory() {
-	if len(t.historyFile) == 0 {
-		return
-	}
-	fd, err := os.Open(t.historyFile)
+// ensurePrivateFile creates the file if needed and makes sure only its owner can
+// read it
+func ensurePrivateFile(path string) error {
+	fd, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
-		t.log("not reading query history: %s", err)
-		return
+		return err
 	}
 	defer fd.Close()
-	if _, err := t.l.ReadHistory(fd); err != nil {
-		t.log("error reading query history: %s", err)
-	}
+	return fd.Chmod(0600)
 }
 
-// writeHistory saves history via a temp file, so an interrupted write can not
-// truncate what was there before. Queries carry hostnames and fact values, so
-// the file is kept private
-func (t *termReader) writeHistory() {
-	if len(t.historyFile) == 0 {
-		return
+// completer adapts the session completer to the line editor, which wants the
+// candidates with the typed prefix already stripped off
+type completer struct {
+	session *Session
+}
+
+func (c *completer) Do(line []rune, pos int) ([][]rune, int) {
+	return completeRunes(c.session.CompletionState(), line, pos)
+}
+
+// completeRunes is Complete in the shape the line editor expects: every
+// candidate loses the prefix that is already on the line, and the number of
+// runes it replaces is returned alongside
+func completeRunes(st CompletionState, line []rune, pos int) ([][]rune, int) {
+	head, completions, _ := Complete(st, string(line), pos)
+	typed := pos - len([]rune(head))
+	if typed < 0 {
+		return nil, 0
 	}
-	dir := filepath.Dir(t.historyFile)
-	tmp, err := os.CreateTemp(dir, filepath.Base(t.historyFile)+".*")
-	if err != nil {
-		t.log("error saving query history: %s", err)
-		return
+	out := make([][]rune, 0, len(completions))
+	for _, candidate := range completions {
+		runes := []rune(candidate)
+		if len(runes) < typed {
+			continue
+		}
+		out = append(out, runes[typed:])
 	}
-	defer os.Remove(tmp.Name())
-	if err := tmp.Chmod(0600); err != nil {
-		t.log("error setting query history permissions: %s", err)
-	}
-	if _, err := t.l.WriteHistory(tmp); err != nil {
-		tmp.Close()
-		t.log("error saving query history: %s", err)
-		return
-	}
-	if err := tmp.Close(); err != nil {
-		t.log("error saving query history: %s", err)
-		return
-	}
-	if err := os.Rename(tmp.Name(), t.historyFile); err != nil {
-		t.log("error saving query history: %s", err)
-	}
+	return out, typed
 }
 
 // NewLineReader picks a line reader for the given input: a full terminal one
 // when it is a tty, a plain line reader when input is piped or redirected.
 // The bool reports whether the session is interactive
 func NewLineReader(s *Session, historyFile string, in *os.File) (LineReader, bool) {
-	// liner drives both ends of the terminal, so a redirected stdout disables it
-	// just as much as piped input does
-	if !liner.TerminalSupported() || !isTerminal(in) || !isTerminal(os.Stdout) {
+	if !isTerminal(in) || !isTerminal(os.Stdout) {
 		return NewScriptReader(in), false
 	}
-	return NewTermReader(s, historyFile), true
+	lr, err := NewTermReader(s, historyFile)
+	if err != nil {
+		s.log.Debugf("no line editing (%s), falling back to plain input", err)
+		return NewScriptReader(in), false
+	}
+	return lr, true
 }
 
 func isTerminal(f *os.File) bool {

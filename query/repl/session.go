@@ -74,6 +74,9 @@ type Session struct {
 	// fleet-wide match from scrolling the summary off the screen
 	streamed   int
 	suppressed int
+	// hintedInterrupt makes the "Ctrl-C on an empty line exits" hint show up
+	// once per session
+	hintedInterrupt bool
 	// hintedNoData makes the "no fact data loaded" hint show up once per session
 	hintedNoData bool
 	csvHeader    map[string]bool
@@ -136,6 +139,12 @@ func (s *Session) Run(lr LineReader) error {
 			}
 			return nil
 		case ErrInterrupted:
+			// the line was thrown away; a Ctrl-C with nothing to throw away
+			// comes back as io.EOF and ends the session
+			if !s.hintedInterrupt {
+				s.hintedInterrupt = true
+				s.printf("(line cleared - Ctrl-C on an empty line exits)")
+			}
 			continue
 		default:
 			return err

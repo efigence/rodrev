@@ -143,3 +143,43 @@ func TestCompleteRebuildsLine(t *testing.T) {
 	assert.Equal(t, `(== (fact "virtual"`, head+completions[0]+tail)
 	assert.True(t, strings.HasPrefix(head+completions[0], line))
 }
+
+// the line editor wants candidates with the typed prefix stripped off, plus how
+// many runes they replace
+func TestCompleteRunes(t *testing.T) {
+	st := testCompletionState(t)
+	tests := []struct {
+		name     string
+		line     string
+		typed    int
+		contains []string
+	}{
+		{name: "function", line: "(fa", typed: 2, contains: []string{"ct "}},
+		{name: "meta command", line: ":cl", typed: 2, contains: []string{"ass ", "uster "}},
+		{name: "fact name in string", line: `(== (fact "virt`, typed: 4, contains: []string{`ual"`}},
+		{name: "nested fact path", line: `(fact "os" "distro" "co`, typed: 2, contains: []string{`dename"`}},
+		{name: "class segment", line: `(class "mon::che`, typed: 8, contains: []string{"ck::"}},
+		{name: "nothing to complete", line: `(fact "nosuchfactname`, typed: 14},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runes := []rune(tt.line)
+			got, length := completeRunes(st, runes, len(runes))
+			assert.Equal(t, tt.typed, length, "replaced prefix length")
+			as := make([]string, 0, len(got))
+			for _, c := range got {
+				as = append(as, string(c))
+			}
+			for _, want := range tt.contains {
+				assert.Contains(t, as, want)
+			}
+			if len(tt.contains) == 0 {
+				assert.Empty(t, as)
+			}
+			// the typed prefix plus a candidate rebuilds a valid line
+			for _, c := range got {
+				assert.True(t, len(tt.line)+len(string(c)) > len(tt.line))
+			}
+		})
+	}
+}

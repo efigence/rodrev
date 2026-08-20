@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -342,6 +343,66 @@ func TestSummaryCoverage(t *testing.T) {
 			for _, unwanted := range tt.absent {
 				assert.NotContains(t, out.String(), unwanted)
 			}
+		})
+	}
+}
+
+// scriptedReader plays a fixed sequence of prompt results, errors included
+type scriptedReader struct {
+	steps []scriptStep
+	pos   int
+}
+
+type scriptStep struct {
+	line string
+	err  error
+}
+
+func (r *scriptedReader) Prompt(prompt string) (string, error) {
+	if r.pos >= len(r.steps) {
+		return "", io.EOF
+	}
+	step := r.steps[r.pos]
+	r.pos++
+	return step.line, step.err
+}
+
+func (r *scriptedReader) Close() error { return nil }
+
+// Ctrl-C throws away the line being typed and the session carries on; a Ctrl-C
+// with nothing to throw away arrives as io.EOF and ends it, so pressing it twice
+// always gets you out
+func TestCtrlCClearsLine(t *testing.T) {
+	s, out := testSession(t, FormatHuman)
+	lr := &scriptedReader{steps: []scriptStep{
+		{err: ErrInterrupted},
+		{line: `(== (class "nginx") true)`},
+		{err: ErrInterrupted},
+		{err: io.EOF},
+		{line: `(== (class "never-reached") true)`},
+	}}
+	require.NoError(t, s.Run(lr))
+	assert.Contains(t, out.String(), "=> true")
+	assert.NotContains(t, out.String(), "=> false")
+	assert.Equal(t, 4, lr.pos, "input after the EOF is not read")
+	// the hint is printed once, not after every cleared line
+	assert.Equal(t, 1, strings.Count(out.String(), "Ctrl-C on an empty line exits"))
+}
+
+// what a Ctrl-C means depends only on whether anything was typed
+func TestInterruptResult(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want error
+	}{
+		{name: "half typed query is cleared", line: `(fact "virt`, want: ErrInterrupted},
+		{name: "empty line exits", line: "", want: io.EOF},
+		{name: "whitespace only exits", line: "   ", want: io.EOF},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, interruptResult(tt.line))
 		})
 	}
 }

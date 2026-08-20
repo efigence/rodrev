@@ -78,6 +78,10 @@ TAB completes meta commands, query functions, fact paths (`(fact "os" "distro" "
 and class names; queries are checked for syntax locally before being sent to the fleet, and
 history is kept in `~/.rv_query_history` (`--history`, `--no-history`).
 
+Ctrl-C throws away the line being typed, or exits when there is nothing to throw away, so
+pressing it twice always gets you out; Ctrl-D and `:quit` exit as well. Ctrl-C while a query
+is running cancels that query and keeps the session.
+
 Meta commands: `:help`, `:syntax` (query language reference with examples), `:fact`,
 `:class`, `:nodes`, `:snapshot`, `:local`, `:cluster`, `:out`, `:timeout`, `:verbose`,
 `:quit`.

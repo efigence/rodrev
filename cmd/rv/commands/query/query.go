@@ -111,13 +111,6 @@ func Query(cmd *cobra.Command, args []string) {
 	defer s.Close()
 	err = s.Run(lr)
 	lr.Close()
-	// some terminals report no size at all, which rules out line editing.
-	// Keep going with plain line input instead of bailing out
-	if err == repl.ErrNoTerminal {
-		s.SetInteractive(false)
-		interactive = false
-		err = s.RunScript(os.Stdin)
-	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %s\n", err)
 		os.Exit(2)
