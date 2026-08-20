@@ -300,6 +300,21 @@ func TestClusterShapedOutput(t *testing.T) {
 	assert.Contains(t, out.String(), "- d3.example.com")
 }
 
+// a one node fleet still reports counts: only a backend that evaluated the
+// query itself can show the value it returned
+func TestSingleNodeClusterSummary(t *testing.T) {
+	var out bytes.Buffer
+	s, err := New(Config{
+		Backend: &fakeBackend{known: 1, results: []NodeResult{{FQDN: "only.example.com"}}},
+		Out:     &out,
+	})
+	require.NoError(t, err)
+	require.NoError(t, s.EvalLine(`(== (class "nginx") true)`))
+	assert.Contains(t, out.String(), "0/1 matched, 1 answered")
+	assert.NotContains(t, out.String(), "not a boolean")
+	assert.NotContains(t, out.String(), "=>")
+}
+
 // the summary must say how much of the fleet was actually accounted for
 func TestSummaryCoverage(t *testing.T) {
 	tests := []struct {
