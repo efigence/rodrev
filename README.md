@@ -54,6 +54,47 @@ There is few added functions and global variables:
 
 * `rv --out=csv puppet --filter '(== (class "systemd::common") true)'  status` - list puppet nodes containing that class
 
+### rv query - interactive query REPL
+
+`rv query` builds and tests filter expressions before they are used with
+`rv puppet --filter`. By default a typed expression is sent to the cluster and the
+matching nodes are listed; with `--facts`/`--classes` (or `--data-dir`) it is evaluated
+locally instead, with no MQ involved.
+
+```
+$ rv query --data-dir t-data
+rv query - local files:t-data/facts.yaml, 97 facts, 117 classes
+  (== (class "nginx") true)          which nodes have that class
+  (== (fact "virtual") "kvm")        which nodes have that fact value
+:help for commands, :syntax for the query language, TAB completes
+rv(local)> (== (fact "os" "distro" "codename") "bookworm")
+=> true
+rv(local)> :fact apt_has*
+apt_has_dist_updates: true
+apt_has_updates: true
+```
+
+TAB completes meta commands, query functions, fact paths (`(fact "os" "distro" "<TAB>`)
+and class names; queries are checked for syntax locally before being sent to the fleet, and
+history is kept in `~/.rv_query_history` (`--history`, `--no-history`).
+
+Meta commands: `:help`, `:syntax` (query language reference with examples), `:fact`,
+`:class`, `:nodes`, `:snapshot`, `:local`, `:cluster`, `:out`, `:timeout`, `:verbose`,
+`:quit`.
+
+Non-interactive use - expressions can also be passed with `-e` or on stdin, and the exit
+code is 0 when something matched, 1 when nothing did, 2 on error:
+
+```
+rv query -e '(== (class "nginx") true)'                     # on the cluster
+rv query --data-dir t-data -o json -e '(fact "is_virtual")' # local, machine readable
+echo '(== (class "nginx") true)' | rv query -o csv
+```
+
+Note that in cluster mode nodes that do not match stay silent, so a query reports how many
+matched but can not tell "did not match" apart from "is down"; `:nodes` lists what
+discovery found.
+
 ### Testing queries
 
 `t-data/` holds an example node state (`facts.yaml`, `classes.txt`, `last_run_summary.yaml`)

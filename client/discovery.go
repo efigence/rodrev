@@ -2,14 +2,15 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/efigence/rodrev/common"
 	"github.com/zerosvc/go-zerosvc"
-	"log"
 	"strings"
 	"time"
 )
 
-// Discover rea
+// Discover returns nodes that announced themselves via heartbeats, split into
+// active and stale ones, and a map of which nodes provide which service
 func Discover(r *common.Runtime) (
 	serviceMap map[string][]common.Node,
 	nodesActive map[string]common.Node,
@@ -21,7 +22,9 @@ func Discover(r *common.Runtime) (
 	nodesStale = make(map[string]common.Node)
 	ch, err := r.Node.GetEventsCh(r.MQPrefix + "heartbeat/#")
 	if err != nil {
-		log.Panicf("can't connect to %s: %s", common.RedactURL(r.Cfg.MQAddress), err)
+		// callers get an error return, do not take the process down with us
+		return serviceMap, nodesActive, nodesStale,
+			fmt.Errorf("can't connect to %s: %s", common.RedactURL(r.Cfg.MQAddress), err)
 	}
 	// time to wait for event stream to start
 	discoveryTime := time.After(time.Second * 10)

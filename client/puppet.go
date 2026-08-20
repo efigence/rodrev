@@ -18,7 +18,10 @@ func PuppetStatus(r *common.Runtime, filter ...string) map[string]puppet.LastRun
 	statusMap := make(map[string]puppet.LastRunSummary, 0)
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
+		// without a reply channel there is nothing to wait for, and closing it
+		// below would panic
 		r.Log.Errorf("error getting reply channel: %s", err)
+		return statusMap
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
@@ -76,6 +79,7 @@ func PuppetRun(r *common.Runtime, node string, filter string, delay time.Duratio
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
+		return nil
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
@@ -103,6 +107,7 @@ func PuppetFact(r *common.Runtime, factName string, filter ...string) map[string
 	replyPath, replyCh, err := r.GetReplyChan()
 	if err != nil {
 		r.Log.Errorf("error getting reply channel: %s", err)
+		return facts
 	}
 	defer close(replyCh)
 	query := r.Node.NewEvent()
