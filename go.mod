@@ -5,12 +5,12 @@ go 1.23.0
 require (
 	github.com/XANi/go-yamlcfg v0.2.0
 	github.com/XANi/goneric v1.1.0
+	github.com/chzyer/readline v1.5.1
 	github.com/efigence/go-icinga2 v0.2.0
 	github.com/efigence/go-ipset v0.0.2
 	github.com/efigence/go-mon v1.4.1
 	github.com/gin-contrib/zap v0.2.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/glycerine/liner v0.0.0-20160121172638-72909af234e0
 	github.com/glycerine/zygomys v5.1.2+incompatible
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/pkg/term v1.1.0
@@ -36,6 +36,7 @@ require (
 	github.com/glycerine/blake2b v0.0.0-20151022103502-3c8c640cd7be // indirect
 	github.com/glycerine/fwd v1.1.4-beta.jea // indirect
 	github.com/glycerine/greenpack v0.529.0 // indirect
+	github.com/glycerine/liner v0.0.0-20160121172638-72909af234e0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.26.0 // indirect
