@@ -2,9 +2,10 @@ package puppet
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Facts struct {
@@ -13,43 +14,35 @@ type Facts struct {
 	l     sync.Mutex
 }
 
-// LoadFacts creates fact structure and loads fact into it
-// on error it can be retired via UpdateFacts() method
-func LoadFacts(path string) (Facts, error) {
+// LoadFacts creates fact structure and loads facts into it.
+// Missing, unparsable or empty fact file is an error; returned object is still
+// usable and the load can be retried via UpdateFacts() method
+func LoadFacts(path string) (*Facts, error) {
 	var f Facts
 	f.path = path
-	fd, err := os.Open(path)
-	if err != nil {
-		return f, err
-	}
-	var facts map[string]interface{}
-	err = yaml.NewDecoder(fd).Decode(&facts)
+	facts := make(map[string]interface{}, 0)
 	f.facts = &facts
-	if err != nil {
-		return f, err
-	}
-	return f, nil
+	return &f, f.UpdateFacts()
 }
 
 func (f *Facts) UpdateFacts() error {
 	fd, err := os.Open(f.path)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening fact file [%s]: %w", f.path, err)
 	}
+	defer fd.Close()
 	var facts map[string]interface{}
 	err = yaml.NewDecoder(fd).Decode(&facts)
-	defer fd.Close()
 	if err != nil {
-		return err
+		return fmt.Errorf("error parsing fact file [%s]: %w", f.path, err)
+	}
+	// in case we get empty YAML do not update
+	if len(facts) == 0 {
+		return fmt.Errorf("got empty fact YAML after decoding [%s]", f.path)
 	}
 	f.l.Lock()
 	defer f.l.Unlock()
-	// in case we get empty YAML do not update
-	if len(facts) > 0 {
-		f.facts = &facts
-	} else {
-		return fmt.Errorf("got empty fact YAML after decode")
-	}
+	f.facts = &facts
 	return nil
 }
 

@@ -2,7 +2,9 @@ package puppet
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -12,7 +14,9 @@ type Classes struct {
 	l       sync.Mutex
 }
 
-// load list of puppet classess
+// LoadClasses loads list of puppet classes from a classfile.
+// Missing, unreadable or empty classfile is an error; returned object is still
+// usable and can be retried via UpdateClasses() method
 func LoadClasses(path string) (*Classes, error) {
 	var f Classes
 	f.path = path
@@ -24,24 +28,30 @@ func LoadClasses(path string) (*Classes, error) {
 func (f *Classes) UpdateClasses() error {
 	fd, err := os.Open(f.path)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening classfile [%s]: %w", f.path, err)
 	}
 	defer fd.Close()
 	classes := make(map[string]interface{}, 0)
 
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
-		classes[scanner.Text()] = true
+		class := strings.TrimSpace(scanner.Text())
+		// puppet writes one class per line, ignore whatever leftover whitespace there is
+		if len(class) == 0 {
+			continue
+		}
+		classes[class] = true
 	}
 	if err := scanner.Err(); err != nil {
-		return err
+		return fmt.Errorf("error reading classfile [%s]: %w", f.path, err)
+	}
+	// in case we get empty classfile do not update
+	if len(classes) == 0 {
+		return fmt.Errorf("got no classes after parsing classfile [%s]", f.path)
 	}
 	f.l.Lock()
 	defer f.l.Unlock()
-	// in case we get empty YAML do not update
-	if len(classes) > 0 {
-		f.classes = &classes
-	}
+	f.classes = &classes
 	return nil
 }
 
