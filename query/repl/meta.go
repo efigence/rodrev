@@ -164,7 +164,7 @@ func (s *Session) metaNodes(args []string) error {
 	}
 	s.nodes = nodes
 	if len(nodes) == 0 {
-		s.printf("no nodes known yet")
+		s.printf("no nodes answered discovery")
 		return nil
 	}
 	sorted := append([]string{}, nodes...)

@@ -1,10 +1,10 @@
 package puppet
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/efigence/rodrev/common"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -36,7 +36,8 @@ func cmdWith(t *testing.T, command, filter string, params interface{}) PuppetCmd
 	t.Helper()
 	cmd := PuppetCmdRecv{Command: command, Filter: filter}
 	if params != nil {
-		raw, err := json.Marshal(params)
+		// parameters travel encoded the same way the event body does
+		raw, err := cbor.Marshal(params)
 		require.NoError(t, err)
 		cmd.Parameters = raw
 	}

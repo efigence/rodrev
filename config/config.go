@@ -31,9 +31,39 @@ type FenceConfig struct {
 	Logger        *zap.SugaredLogger   `yaml:"-"`
 }
 type FenceNode struct {
-	Nodes    []string `yaml:"node"`
+	// Nodes lists the nodes this client is allowed to fence
+	Nodes []string `yaml:"nodes"`
+	// Node is the singular spelling earlier versions read. Use nodes
+	Node     []string `yaml:"node"`
 	Password string   `yaml:"password"`
 }
+
+// AllowedNodes returns the nodes this entry may fence, under either spelling of
+// the key
+func (f FenceNode) AllowedNodes() []string {
+	if len(f.Node) == 0 {
+		return f.Nodes
+	}
+	return append(append([]string{}, f.Nodes...), f.Node...)
+}
+
+// HeartbeatCleanup controls removal of retained presence messages left behind by
+// nodes that are gone. They are retained and have no TTL, so unless somebody
+// removes them they stay on the broker forever
+type HeartbeatCleanup struct {
+	Disabled bool `yaml:"disabled,omitempty"`
+	// MaxAge is how long a node can be silent before its presence is removed.
+	// Keep it generous: a removed heartbeat also removes the evidence that the
+	// node ever existed
+	MaxAge time.Duration `yaml:"max_age,omitempty"`
+	// Interval is roughly how often to look, randomized per node
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// InitialDelay is how long after start to do the first pass, randomized
+	InitialDelay time.Duration `yaml:"initial_delay,omitempty"`
+	// DryRun logs what would be removed and removes nothing
+	DryRun bool `yaml:"dry_run,omitempty"`
+}
+
 type Config struct {
 	MQPrefix      string                 `yaml:"mq_prefix,omitempty"`
 	MQAddress     string                 `yaml:"mq_address,omitempty"`
@@ -50,7 +80,9 @@ type Config struct {
 	IcingaAPIURL  string                 `yaml:"icinga_api_url"`
 	IcingaAPIUser string                 `yaml:"icinga_api_user"`
 	IcingaAPIPass string                 `yaml:"icinga_api_pass"`
-	configPath    string
+	// HeartbeatCleanup removes retained presence of nodes that are long gone
+	HeartbeatCleanup HeartbeatCleanup `yaml:"heartbeat_cleanup"`
+	configPath       string
 	// hook for when a component wants to exit
 	ExitFunc func(reason string) `yaml:"-"`
 }

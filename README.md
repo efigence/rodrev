@@ -139,6 +139,43 @@ directory with the same three file names to test against another node's data.
 
 
 
+### Protocol
+
+Events are CBOR bodies inside a signed-envelope frame, published under the configured
+`mq_prefix` (`rv/` by default): `rv/puppet` reaches every node, `rv/puppet/<fqdn>` one of them,
+and replies go to a per-client `rv/reply/<client>/<id>/<call>` topic that carries the
+correlation id back.
+
+Presence works through retained heartbeats on `rv/discovery/<node name>/<node uuid>`, as plain
+JSON node info. That info only carries the name, uuid, timestamp and service list, so
+everything else a client needs - fqdn, daemon version, supported commands, heartbeat interval
+- is published as the `Data` of the daemon's own `rodrev` service entry. Anything on that
+topic tree without a `rodrev` service entry is not a fleet node (the cli announces itself
+there too) and is ignored by discovery.
+
+A heartbeat is retained with no TTL, so a node clears its own with an empty retained message
+via the MQTT will when it disconnects. A node that never got the chance leaves one behind, and
+`rvd` cleans those up: the first pass runs a few minutes after start, then roughly weekly, both
+randomized per node so a fleet does not do it in one spike. It removes retained presence whose
+timestamp is older than `max_age`, whose payload can not be parsed, and anything still sitting
+on the heartbeat topic older daemons used. Its own presence and any node still checking in are
+left alone.
+
+```yaml
+heartbeat_cleanup:
+    # disabled: true
+    max_age: 720h      # how long a node may be silent before its presence goes
+    interval: 168h     # roughly how often to look
+    initial_delay: 5m  # first pass after start
+    dry_run: false     # log what would go, remove nothing
+```
+
+For TLS use `ssl://` in `mq_address` - `tls://` is accepted and normalized, since that is what
+older rodrev configs use.
+
+`rv` and `rvd` speak this protocol from the same release onwards and are not compatible with
+older daemons, so both sides have to be upgraded together.
+
 ### Daemon commands
 
 The puppet module answers these commands (`rv` sends them, the daemon announces the list in
@@ -193,7 +230,10 @@ This is NOT for security (checks are weak, password not implemented yet), just t
 ---
 fence:
     enabled: true
-    # maps clients to nodes it is allowed to fence
+    # maps clients to the nodes each of them is allowed to fence. The key is the
+    # client node name, which is rf-client-<hostname> unless a client cert says
+    # otherwise; it is the name that shows up in the daemon log when a request
+    # is refused
     node_map: 
         rf-client-node1-fence:        
             nodes:

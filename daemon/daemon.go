@@ -17,9 +17,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
-	"strings"
 	"time"
 )
+
+// heartbeatInterval is how often the daemon announces itself. Clients treat a
+// heartbeat older than a few intervals as stale
+const heartbeatInterval = time.Minute
 
 type Daemon struct {
 	node    *zerosvc.Node
@@ -39,43 +42,50 @@ func New(cfg config.Config) (*Daemon, error) {
 	d.fqdn = util.GetFQDN()
 	d.exitFunc = cfg.ExitFunc
 	d.l = cfg.Logger
-	tr := zerosvc.NewTransport(zerosvc.TransportMQTT, cfg.MQAddress, zerosvc.TransportMQTTConfig{
-		// cleanup retained heartbeat by sending empty message
-		// no TTL in MQTTv3
-		LastWillTopic:  cfg.MQPrefix + "heartbeat/" + d.fqdn,
-		LastWillRetain: true,
-	})
-
-	// TODO save uuid somewhere
-	d.node = zerosvc.NewNode(d.fqdn, uuid.NewV4().String())
-	d.node.Info["fqdn"] = d.fqdn
-	d.node.Info["version"] = cfg.Version
-	d.node.Info["features"] = strings.Join(puppet.Features, ",")
-
-	d.node.Services["puppet"] = zerosvc.Service{
-		Path:        "puppet",
-		Description: "puppet management",
-		Defaults:    nil,
-	}
 	d.l.Infof("connecting to queue at %s", common.RedactURL(cfg.MQAddress))
-	err := tr.Connect()
+	// the heartbeat carries name, uuid and services, so everything a client
+	// needs to know about this daemon goes into its own service entry
+	// TODO save uuid somewhere
+	node, tr, err := common.NewNode(cfg, common.NodeConfig{
+		Name:              d.fqdn,
+		UUID:              uuid.NewV4().String(),
+		HeartbeatInterval: heartbeatInterval,
+		Logger:            cfg.Logger,
+		Services: map[string]zerosvc.Service{
+			common.RodrevServiceName: {
+				Ok:   true,
+				Info: "rodrev daemon",
+				Data: common.RodrevService{
+					FQDN:              d.fqdn,
+					Version:           cfg.Version,
+					Features:          puppet.Features,
+					HeartbeatInterval: heartbeatInterval,
+				},
+			},
+			"puppet": {Ok: true, Info: "puppet management"},
+		},
+	})
 	if err != nil {
-		return nil, fmt.Errorf("can't connect to queue at %s: %s", common.RedactURL(cfg.MQAddress), err)
+		return nil, err
 	}
-	d.node.SetTransport(tr)
+	d.node = node
 
 	runtime := &common.Runtime{
-		Node:     d.node,
-		FQDN:     d.fqdn,
-		MQPrefix: cfg.MQPrefix,
-		Log:      cfg.Logger,
-		Metadata: cfg.NodeMeta,
-		Cfg:      cfg,
-		Debug:    cfg.Debug,
+		Node:      d.node,
+		Transport: tr,
+		FQDN:      d.fqdn,
+		MQPrefix:  cfg.MQPrefix,
+		Log:       cfg.Logger,
+		Metadata:  cfg.NodeMeta,
+		Cfg:       cfg,
+		Debug:     cfg.Debug,
 	}
 	d.runtime = runtime
 	d.query = query.NewQueryEngine(runtime)
-	go d.heartbeat(time.Minute)
+	if err := d.startHeartbeatCleanup(cfg.HeartbeatCleanup); err != nil {
+		// not being able to tidy up is not a reason to refuse to start
+		d.l.Errorf("heartbeat cleanup not running: %s", err)
+	}
 
 	pu, err := puppet.New(puppet.Config{
 		Runtime: runtime,
@@ -89,7 +99,7 @@ func New(cfg config.Config) (*Daemon, error) {
 		puppetState := mon.GlobalStatus.MustNewComponent("puppet")
 		puppetState.Update(mon.StateUnknown, "initializing")
 		for {
-			ch, err := d.node.GetEventsCh(d.prefix + "puppet/#")
+			ch, err := d.node.GetEventsCh("puppet/#")
 			if err != nil {
 				puppetState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 				d.l.Errorf("error connecting to channel: %s", err)
@@ -116,7 +126,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			fencingState := mon.GlobalStatus.MustNewComponent("fencing")
 			fencingState.Update(mon.StateUnknown, "initializing")
 			for {
-				ch, err := d.node.GetEventsCh(d.prefix + "fence/" + d.fqdn)
+				ch, err := d.node.GetEventsCh("fence/" + d.fqdn)
 				if err != nil {
 					fencingState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
 					d.l.Errorf("error connecting to channel: %s", err)
@@ -145,7 +155,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			for _, setcfg := range cfg.IPSet.Sets {
 				go func(setname config.IPSet) {
 					for {
-						topic := d.prefix + "ipset/" +
+						topic := "ipset/" +
 							setname.BroadcastGroup +
 							"/" + setname.Name
 
@@ -187,7 +197,7 @@ func New(cfg config.Config) (*Daemon, error) {
 			d.l.Errorf("error initializing icinga api: %w", err)
 		} else {
 			for {
-				ch, err := d.node.GetEventsCh(d.prefix + "downtime/#")
+				ch, err := d.node.GetEventsCh("downtime/#")
 				if err != nil {
 					d.l.Errorf("error initializing icinga api channel: %w", err)
 					icingaApiState.Update(mon.StateCritical, fmt.Sprintf("%s", err))
@@ -216,34 +226,6 @@ endapi:
 		d.l.Errorf("error running webserver: %s", web.Run())
 	}()
 	return &d, nil
-}
-
-func (d *Daemon) heartbeat(interval time.Duration) {
-	if interval == 0 {
-		interval = time.Minute
-	}
-	errctr := 0
-	for {
-		ev := d.node.NewHeartbeat()
-		t := time.Now().Add(interval * 3)
-		ev.RetainTill = &t
-		hbPath := d.prefix + "heartbeat/" + d.fqdn
-		err := d.node.SendEvent(hbPath, ev)
-		if err != nil {
-			errctr++
-			d.l.Warnf("could not send heartbeat: %s", err)
-		} else {
-			if errctr >= 1 {
-				errctr--
-			}
-		}
-		if errctr > 60 {
-			go d.exit()
-		}
-
-		d.l.Debugf("HB sent to %s", hbPath)
-		time.Sleep(interval)
-	}
 }
 
 func (d *Daemon) exit() {

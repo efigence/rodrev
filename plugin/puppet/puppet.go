@@ -1,11 +1,11 @@
 package puppet
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/efigence/rodrev/common"
 	"github.com/efigence/rodrev/query"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
@@ -149,10 +149,11 @@ type PuppetCmdSend struct {
 
 // wrapper so we can delay unmarshalling parameters and switch on Command
 type PuppetCmdRecv struct {
-	Command      string          `json:"cmd"`
-	Filter       string          `json:"filter,omitempty"`
-	AnswerAlways bool            `json:"answer_always,omitempty"`
-	Parameters   json.RawMessage `json:"params"`
+	Command      string `json:"cmd"`
+	Filter       string `json:"filter,omitempty"`
+	AnswerAlways bool   `json:"answer_always,omitempty"`
+	// Parameters stay encoded until the command they belong to is known
+	Parameters cbor.RawMessage `json:"params"`
 }
 
 type Msg struct {

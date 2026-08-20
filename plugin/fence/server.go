@@ -35,6 +35,9 @@ type Fence struct {
 	fenceModule FenceModule
 	l           *zap.SugaredLogger
 	node        *zerosvc.Node
+	runtime     *common.Runtime
+	// fqdn is who we are, settled at startup
+	fqdn string
 }
 
 type FenceCmd struct {
@@ -52,6 +55,8 @@ func New(runtime *common.Runtime, cfg config.FenceConfig) (*Fence, error) {
 	f.cfg = &cfg
 	f.l = cfg.Logger
 	f.node = runtime.Node
+	f.runtime = runtime
+	f.fqdn = runtime.FQDN
 	if cfg.Fake {
 		f.l.Errorf("FAKE FENCING ENABLED IN CONFIG! ACTUAL FENCING WILL NOT HAPPEN! THIS WILL EAT YOUR DATA IN PRODUCTION!")
 	}
@@ -62,15 +67,24 @@ func (p *Fence) EventListener(evCh chan zerosvc.Event) error {
 	for ev := range evCh {
 		err := p.HandleEvent(&ev)
 		if err != nil {
-			p.l.Errorf("Error handling fence event[%s:%s]: %s", ev.NodeName(), string(ev.Body), err)
+			p.l.Errorf("Error handling fence event[%s:%s]: %s", ev.NodeName, string(ev.Body), err)
 		}
 	}
 	return fmt.Errorf("channel for puppet server disconnected")
 }
 
+// CheckPermissions decides whether the node that sent a request may fence us.
+//
+// This is not a security boundary (there is no password check yet), it is here to
+// keep an accident on one node from taking down another
 func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool, err error) {
 	if f.cfg.Group == "" && len(f.cfg.NodeMap) == 0 {
 		return true, nil
+	}
+	// requests reach us on our own fence topic, so a request naming somebody
+	// else is not ours to act on
+	if len(cmd.Node) > 0 && cmd.Node != f.fqdn {
+		return false, nil
 	}
 	if f.cfg.Group != "" {
 		if v, ok := ev.Headers["fence-group"]; ok {
@@ -79,10 +93,11 @@ func (f *Fence) CheckPermissions(ev *zerosvc.Event, cmd *FenceCmd) (allowed bool
 			}
 		}
 	}
+	// node_map is keyed by the client that asks, and its entry lists the nodes
+	// that client may fence
 	if len(f.cfg.NodeMap) > 0 {
-		allowedTargets := f.cfg.NodeMap[cmd.Node].Nodes
-		for _, n := range allowedTargets {
-			if n == util.GetFQDN() {
+		for _, node := range f.cfg.NodeMap[ev.NodeName].AllowedNodes() {
+			if node == f.fqdn {
 				return true, nil
 			}
 		}
@@ -94,15 +109,20 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 	var cmd FenceCmd
 	err := ev.Unmarshal(&cmd)
 	if err != nil {
-		return fmt.Errorf("error unmarshalling event from %s[%s]: %s", ev.NodeName(), string(ev.Body), err)
+		return fmt.Errorf("error unmarshalling event from %s[%s]: %s", ev.NodeName, string(ev.Body), err)
 	}
 	allowed, err := f.CheckPermissions(ev, &cmd)
+	if err != nil {
+		return fmt.Errorf("error checking whether %s may fence us: %s", ev.NodeName, err)
+	}
 	if !allowed {
-		return fmt.Errorf("node %s is not permitted to fence us [group:%+v]", ev.NodeName(), ev.Headers["fence-group"])
+		return fmt.Errorf("node %s is not permitted to fence %s [fence-group: %v, node_map entry: %v]",
+			ev.NodeName, f.fqdn, ev.Headers["fence-group"],
+			f.cfg.NodeMap[ev.NodeName].AllowedNodes())
 	}
 	switch cmd.Command {
 	case cmdFence:
-		f.l.Debugf("got fence request from %s", ev.NodeName())
+		f.l.Debugf("got fence request from %s", ev.NodeName)
 		if f.cfg.Fake {
 			f.l.Errorf("FAKE FENCING ACKNOWLEDGED, DONT USE ON PROD")
 			err = nil
@@ -123,18 +143,22 @@ func (f *Fence) HandleEvent(ev *zerosvc.Event) error {
 			resp.Success = true
 		}
 		re.Marshal(resp)
-		ev.Reply(re)
+		if err := f.runtime.Reply(ev, re); err != nil {
+			f.l.Errorf("error replying to %s: %s", ev.NodeName, err)
+		}
 	case cmdStatus:
-		f.l.Infof("status request from %s[%+v]", ev.NodeName(), ev.Headers)
+		f.l.Infof("status request from %s[%+v]", ev.NodeName, ev.Headers)
 		// TODO check fence status
 		resp := FenceResponse{}
 		resp.Success = true
 		re := f.node.NewEvent()
 		re.Headers["fqdn"] = util.GetFQDN()
 		re.Marshal(resp)
-		ev.Reply(re)
+		if err := f.runtime.Reply(ev, re); err != nil {
+			f.l.Errorf("error replying to %s: %s", ev.NodeName, err)
+		}
 	default:
-		f.l.Warnf("got unknown command [%s] from %s", cmd.Command, ev.NodeName())
+		f.l.Warnf("got unknown command [%s] from %s", cmd.Command, ev.NodeName)
 
 	}
 

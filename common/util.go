@@ -1,10 +1,12 @@
 package common
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/efigence/rodrev/config"
 	"github.com/spf13/cobra"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -26,6 +28,16 @@ func DurationOrPanic(d time.Duration, err error) time.Duration {
 		panic(fmt.Sprintf("error getting argument: %s", err))
 	}
 	return d
+}
+
+// RandomToken returns a short random string usable in a topic or a client id
+func RandomToken(bytes int) string {
+	blob := make([]byte, bytes)
+	if _, err := rand.Read(blob); err != nil {
+		// only used to keep names apart, so a timestamp is good enough
+		return strconv.FormatInt(time.Now().UnixNano(), 36)
+	}
+	return MapBytesToTopicTitle(blob)
 }
 
 // RedactURL returns URL with password replaced by a placeholder, safe to log.
@@ -54,7 +66,8 @@ func MergeCliConfig(cfg *config.Config, cmd *cobra.Command) {
 	}
 	u, err := url.Parse(cfg.MQAddress)
 	if err != nil {
-		panic(fmt.Sprintf("can't parse URL: %s", err))
+		// the parse error would carry the url, and with it the password
+		panic(fmt.Sprintf("can't parse MQ url [%s]: %s", RedactURL(cfg.MQAddress), causeOf(err)))
 	}
 	if len(u.Path) == 0 {
 		u.Path = "/"
