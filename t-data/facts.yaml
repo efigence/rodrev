@@ -1,0 +1,1095 @@
+---
+accounting_project: dc1-example
+agent_specified_environment: stable
+aio_agent_version: 7.34.0
+apt_dist_updates: 166
+apt_has_dist_updates: true
+apt_has_updates: true
+apt_package_dist_updates:
+- base-files
+- bash
+- bsdutils
+- dpkg
+- login
+- sed
+- libcc1-0
+- gcc-12-base
+- libgcc-s1
+- libgomp1
+- libitm1
+- libatomic1
+- libasan8
+- liblsan0
+- libtsan2
+- libubsan1
+- libquadmath0
+- libgcc-12-dev
+- gcc-12
+- cpp-12
+- libstdc++6
+- libc6
+- libsmartcols1
+- util-linux-extra
+- util-linux
+- init-system-helpers
+- libc-bin
+- libpam0g
+- libpam-modules-bin
+- libpam-modules
+- logsave
+- initramfs-tools
+- initramfs-tools-core
+- libext2fs2
+- e2fsprogs
+- linux-base
+- libcap2
+- libpam-runtime
+- systemd-sysv
+- libpam-systemd
+- libblkid1
+- libuuid1
+- libfdisk1
+- libgcrypt20
+- liblzma5
+- libmount1
+- libssl3
+- systemd
+- libsystemd-shared
+- libsystemd0
+- mount
+- udev
+- libudev1
+- init
+- libiperf0
+- iperf3
+- python3.11
+- libpython3.11-stdlib
+- python3.11-minimal
+- libpython3.11-minimal
+- libsqlite3-0
+- libexpat1
+- redis-server
+- redis-tools
+- rsync
+- sudo
+- uuid-runtime
+- passwd
+- debian-archive-keyring
+- gpgv
+- libfile-find-rule-perl
+- libgnutls-openssl27
+- libtasn1-6
+- libgnutls30
+- tzdata
+- vim-tiny
+- xxd
+- vim-common
+- libgssapi-krb5-2
+- libkrb5-3
+- libkrb5support0
+- libk5crypto3
+- libcom-err2
+- libnghttp2-14
+- libicu72
+- libxml2
+- bind9-dnsutils
+- bind9-host
+- bind9-libs
+- krb5-locales
+- libc-l10n
+- locales
+- ucf
+- wget
+- xz-utils
+- aide
+- libaprutil1
+- apache2-utils
+- augeas-lenses
+- bsdextrautils
+- busybox
+- curl
+- libcurl4
+- gpgsm
+- gpg-wks-client
+- gpg-wks-server
+- gpg
+- gnupg-utils
+- gnupg-l10n
+- dirmngr
+- gnupg
+- gpg-agent
+- gpgconf
+- distro-info-data
+- dnsutils
+- dpkg-dev
+- libdpkg-perl
+- libcurl3-gnutls
+- git-man
+- git
+- gnupg-agent
+- grub2-common
+- grub-pc
+- grub-pc-bin
+- libpng16-16
+- libfreetype6
+- grub-common
+- jq
+- libjq1
+- libabsl20220623
+- libaugeas0
+- libavahi-client3
+- libavahi-common3
+- libavahi-common-data
+- libbpf1
+- libcap2-bin
+- libcups2
+- libdbi-perl
+- libgdk-pixbuf2.0-common
+- libglib2.0-0
+- libtiff6
+- libgdk-pixbuf-2.0-0
+- libgraphite2-3
+- libhtml-parser-perl
+- liblcms2-2
+- libmodule-scandeps-perl
+- libnss3
+- libss2
+- libxml-libxml-perl
+- libyaml-libyaml-perl
+- linux-image-6.1.0-52-amd64
+- linux-image-amd64
+- locales-all
+- needrestart
+- net-tools
+- nginx-common
+- nginx
+- openjdk-17-jdk-headless
+- openjdk-17-jre-headless
+- openssl
+- python3-pkg-resources
+- rsyslog-relp
+- rsyslog
+- ruby-rubygems
+- unzip
+- util-linux-locales
+apt_package_security_dist_updates:
+- linux-base
+- libgcrypt20
+- libssl3
+- redis-server
+- redis-tools
+- libfile-find-rule-perl
+- libgnutls-openssl27
+- libtasn1-6
+- libgnutls30
+- libgssapi-krb5-2
+- libkrb5-3
+- libkrb5support0
+- libk5crypto3
+- libnghttp2-14
+- libicu72
+- bind9-dnsutils
+- bind9-host
+- bind9-libs
+- krb5-locales
+- aide
+- libaprutil1
+- dnsutils
+- libpng16-16
+- libfreetype6
+- jq
+- libjq1
+- libcups2
+- libdbi-perl
+- libgdk-pixbuf2.0-common
+- libtiff6
+- libgdk-pixbuf-2.0-0
+- liblcms2-2
+- libmodule-scandeps-perl
+- libnss3
+- linux-image-6.1.0-52-amd64
+- linux-image-amd64
+- needrestart
+- net-tools
+- nginx-common
+- nginx
+- openjdk-17-jdk-headless
+- openjdk-17-jre-headless
+- openssl
+- unzip
+apt_package_security_updates:
+- linux-base
+- libgcrypt20
+- libssl3
+- redis-server
+- redis-tools
+- libfile-find-rule-perl
+- libgnutls-openssl27
+- libtasn1-6
+- libgnutls30
+- libgssapi-krb5-2
+- libkrb5-3
+- libkrb5support0
+- libk5crypto3
+- libnghttp2-14
+- libicu72
+- bind9-dnsutils
+- bind9-host
+- bind9-libs
+- krb5-locales
+- aide
+- libaprutil1
+- dnsutils
+- libpng16-16
+- libfreetype6
+- jq
+- libjq1
+- libcups2
+- libdbi-perl
+- libgdk-pixbuf2.0-common
+- libtiff6
+- libgdk-pixbuf-2.0-0
+- liblcms2-2
+- libmodule-scandeps-perl
+- libnss3
+- needrestart
+- net-tools
+- nginx-common
+- nginx
+- openjdk-17-jdk-headless
+- openjdk-17-jre-headless
+- openssl
+- unzip
+apt_package_updates:
+- base-files
+- bash
+- bsdutils
+- dpkg
+- login
+- sed
+- libcc1-0
+- gcc-12-base
+- libgcc-s1
+- libgomp1
+- libitm1
+- libatomic1
+- libasan8
+- liblsan0
+- libtsan2
+- libubsan1
+- libquadmath0
+- libgcc-12-dev
+- gcc-12
+- cpp-12
+- libstdc++6
+- libc6
+- libsmartcols1
+- util-linux-extra
+- util-linux
+- init-system-helpers
+- libc-bin
+- libpam0g
+- libpam-modules-bin
+- libpam-modules
+- logsave
+- initramfs-tools
+- initramfs-tools-core
+- libext2fs2
+- e2fsprogs
+- linux-base
+- libcap2
+- libpam-runtime
+- systemd-sysv
+- libpam-systemd
+- libblkid1
+- libuuid1
+- libfdisk1
+- libgcrypt20
+- liblzma5
+- libmount1
+- libssl3
+- systemd
+- libsystemd-shared
+- libsystemd0
+- mount
+- udev
+- libudev1
+- init
+- libiperf0
+- iperf3
+- python3.11
+- libpython3.11-stdlib
+- python3.11-minimal
+- libpython3.11-minimal
+- libsqlite3-0
+- libexpat1
+- redis-server
+- redis-tools
+- rsync
+- sudo
+- uuid-runtime
+- passwd
+- debian-archive-keyring
+- gpgv
+- libfile-find-rule-perl
+- libgnutls-openssl27
+- libtasn1-6
+- libgnutls30
+- tzdata
+- vim-tiny
+- xxd
+- vim-common
+- libgssapi-krb5-2
+- libkrb5-3
+- libkrb5support0
+- libk5crypto3
+- libcom-err2
+- libnghttp2-14
+- libicu72
+- libxml2
+- bind9-dnsutils
+- bind9-host
+- bind9-libs
+- krb5-locales
+- libc-l10n
+- locales
+- ucf
+- wget
+- xz-utils
+- aide
+- libaprutil1
+- apache2-utils
+- augeas-lenses
+- bsdextrautils
+- busybox
+- curl
+- libcurl4
+- gpgsm
+- gpg-wks-client
+- gpg-wks-server
+- gpg
+- gnupg-utils
+- gnupg-l10n
+- dirmngr
+- gnupg
+- gpg-agent
+- gpgconf
+- distro-info-data
+- dnsutils
+- dpkg-dev
+- libdpkg-perl
+- libcurl3-gnutls
+- git-man
+- git
+- gnupg-agent
+- grub2-common
+- grub-pc
+- grub-pc-bin
+- libpng16-16
+- libfreetype6
+- grub-common
+- jq
+- libjq1
+- libabsl20220623
+- libaugeas0
+- libavahi-client3
+- libavahi-common3
+- libavahi-common-data
+- libbpf1
+- libcap2-bin
+- libcups2
+- libdbi-perl
+- libgdk-pixbuf2.0-common
+- libglib2.0-0
+- libtiff6
+- libgdk-pixbuf-2.0-0
+- libgraphite2-3
+- libhtml-parser-perl
+- liblcms2-2
+- libmodule-scandeps-perl
+- libnss3
+- libss2
+- libxml-libxml-perl
+- libyaml-libyaml-perl
+- locales-all
+- needrestart
+- net-tools
+- nginx-common
+- nginx
+- openjdk-17-jdk-headless
+- openjdk-17-jre-headless
+- openssl
+- python3-pkg-resources
+- rsyslog-relp
+- rsyslog
+- ruby-rubygems
+- unzip
+- util-linux-locales
+apt_reboot_required: false
+apt_security_dist_updates: 44
+apt_security_updates: 42
+apt_sources:
+- sources.list
+- debian-bookworm-security.list
+- local-common.list
+- local.list
+- debian-bookworm.list
+apt_update_last_success: 1787190842
+apt_updates: 164
+augeas:
+  version: 1.14.1
+binary_arch: amd64
+directory_perl_net: "/usr/share/perl5/Net/IP.pm"
+disks:
+  vda:
+    size: 10.00 GiB
+    size_bytes: 10737418240
+    type: hdd
+    vendor: '0x1af4'
+  vdb:
+    size: 1.00 GiB
+    size_bytes: 1073741824
+    type: hdd
+    vendor: '0x1af4'
+distro: Debian_12.8
+dmi:
+  bios:
+    release_date: 01/01/2011
+    vendor: QEmu/KVM Puppet
+    version: Bochs
+  chassis:
+    type: Other
+  manufacturer: dc1
+  product:
+    name: blade205.example.com
+    uuid: 32b51d6a-c4f7-52e3-87db-91ce8d8643f4
+facterversion: 4.10.0
+filesystems: ext2,ext3,ext4,xfs
+fips_enabled: false
+firewall_provider: ferm
+hwrng: true
+hypervisors:
+  kvm: {}
+identity:
+  gid: 0
+  group: root
+  privileged: true
+  uid: 0
+  user: root
+install:
+  age_days: 3740
+  ts: 2016-05-23 18:21:17 UTC
+  uuid: ebcd3c48-cf6b-4214-99a2-454a1b855263
+is_pe: false
+is_virtual: true
+jetty_deployed: false
+kernel: Linux
+kernelmajversion: '6.1'
+kernelrelease: 6.1.0-10-amd64
+kernelversion: 6.1.0
+load_averages:
+  15m: 0.12
+  1m: 0.1
+  5m: 0.14
+local_instance: d1-lg
+local_site: dc1
+memory:
+  swap:
+    available: 4.13 MiB
+    available_bytes: 4325376
+    capacity: 99.60%
+    total: 1.00 GiB
+    total_bytes: 1073737728
+    used: 1019.87 MiB
+    used_bytes: 1069412352
+  system:
+    available: 462.65 MiB
+    available_bytes: 485122048
+    capacity: 76.51%
+    total: 1.92 GiB
+    total_bytes: 2065408000
+    used: 1.47 GiB
+    used_bytes: 1580285952
+meta:
+  site: dc1
+modules: af_alg,tcp_diag,inet_diag,binfmt_misc,ip_set_hash_ip,ip_set,ghash_clmulni_intel,sha512_ssse3,sha512_generic,ext4,nft_limit,crc16,mbcache,jbd2,xt_multiport,xt_tcpudp,aesni_intel,xt_LOG,nf_log_syslog,xt_hashlimit,crypto_simd,xt_limit,cryptd,xt_comment,i6300esb,cirrus,pcspkr,virtio_balloon,drm_shmem_helper,watchdog,nft_compat,drm_kms_helper,evdev,button,joydev,serio_raw,nf_tables,nfnetlink,xt_conntrack,nf_conntrack,nf_defrag_ipv6,nf_defrag_ipv4,fuse,loop,efi_pstore,drm,dm_mod,configfs,qemu_fw_cfg,virtio_rng,rng_core,ip_tables,x_tables,autofs4,hid_generic,usbhid,hid,xfs,libcrc32c,crc32c_generic,ata_generic,virtio_net,ata_piix,uhci_hcd,net_failover,ehci_hcd,virtio_blk,failover,usbcore,libata,crct10dif_pclmul,crct10dif_common,crc32_pclmul,crc32c_intel,usb_common,scsi_mod,psmouse,virtio_pci,virtio_pci_legacy_dev,virtio_pci_modern_dev,virtio,virtio_ring,i2c_piix4,scsi_common,floppy
+mountpoints:
+  "/":
+    available: 3.52 GiB
+    available_bytes: 3776315392
+    capacity: 63.03%
+    device: "/dev/vda2"
+    filesystem: xfs
+    options:
+    - rw
+    - relatime
+    - attr2
+    - inode64
+    - logbufs=8
+    - logbsize=32k
+    - noquota
+    size: 9.51 GiB
+    size_bytes: 10214178816
+    used: 6.00 GiB
+    used_bytes: 6437863424
+  "/boot":
+    available: 337.64 MiB
+    available_bytes: 354045952
+    capacity: 24.13%
+    device: "/dev/vda1"
+    filesystem: ext2
+    options:
+    - rw
+    - relatime
+    size: 469.35 MiB
+    size_bytes: 492152832
+    used: 107.36 MiB
+    used_bytes: 112574464
+  "/dev":
+    available: 965.80 MiB
+    available_bytes: 1012719616
+    capacity: 0%
+    device: udev
+    filesystem: devtmpfs
+    options:
+    - rw
+    - nosuid
+    - relatime
+    - size=988984k
+    - nr_inodes=247246
+    - mode=755
+    - inode64
+    size: 965.80 MiB
+    size_bytes: 1012719616
+    used: 0 bytes
+    used_bytes: 0
+  "/dev/hugepages":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: hugetlbfs
+    filesystem: hugetlbfs
+    options:
+    - rw
+    - relatime
+    - pagesize=2M
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/dev/mqueue":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: mqueue
+    filesystem: mqueue
+    options:
+    - rw
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/dev/pts":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: devpts
+    filesystem: devpts
+    options:
+    - rw
+    - nosuid
+    - noexec
+    - relatime
+    - gid=5
+    - mode=620
+    - ptmxmode=000
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/dev/shm":
+    available: 984.86 MiB
+    available_bytes: 1032699904
+    capacity: 0.00%
+    device: tmpfs
+    filesystem: tmpfs
+    options:
+    - rw
+    - nosuid
+    - nodev
+    - inode64
+    size: 984.86 MiB
+    size_bytes: 1032704000
+    used: 4.00 KiB
+    used_bytes: 4096
+  "/run":
+    available: 196.38 MiB
+    available_bytes: 205922304
+    capacity: 0.30%
+    device: tmpfs
+    filesystem: tmpfs
+    options:
+    - rw
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - size=201700k
+    - mode=755
+    - inode64
+    size: 196.97 MiB
+    size_bytes: 206540800
+    used: 604.00 KiB
+    used_bytes: 618496
+  "/run/credentials/systemd-sysctl.service":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: ramfs
+    filesystem: ramfs
+    options:
+    - ro
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - mode=700
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/run/credentials/systemd-sysusers.service":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: ramfs
+    filesystem: ramfs
+    options:
+    - ro
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - mode=700
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/run/credentials/systemd-tmpfiles-setup-dev.service":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: ramfs
+    filesystem: ramfs
+    options:
+    - ro
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - mode=700
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/run/credentials/systemd-tmpfiles-setup.service":
+    available: 0 bytes
+    available_bytes: 0
+    capacity: 100%
+    device: ramfs
+    filesystem: ramfs
+    options:
+    - ro
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - mode=700
+    size: 0 bytes
+    size_bytes: 0
+    used: 0 bytes
+    used_bytes: 0
+  "/run/lock":
+    available: 5.00 MiB
+    available_bytes: 5242880
+    capacity: 0%
+    device: tmpfs
+    filesystem: tmpfs
+    options:
+    - rw
+    - nosuid
+    - nodev
+    - noexec
+    - relatime
+    - size=5120k
+    - inode64
+    size: 5.00 MiB
+    size_bytes: 5242880
+    used: 0 bytes
+    used_bytes: 0
+  "/run/user/20110900":
+    available: 196.97 MiB
+    available_bytes: 206540800
+    capacity: 0%
+    device: tmpfs
+    filesystem: tmpfs
+    options:
+    - rw
+    - nosuid
+    - nodev
+    - relatime
+    - size=201700k
+    - nr_inodes=50425
+    - mode=700
+    - uid=20110900
+    - gid=666
+    - inode64
+    size: 196.97 MiB
+    size_bytes: 206540800
+    used: 0 bytes
+    used_bytes: 0
+mounts: "/sys /proc /dev /dev/pts /run / /sys/kernel/security /dev/shm /run/lock /sys/fs/cgroup
+  /sys/fs/pstore /sys/fs/bpf /proc/sys/fs/binfmt_misc /dev/hugepages /dev/mqueue /sys/kernel/debug
+  /sys/kernel/tracing /sys/fs/fuse/connections /sys/kernel/config /run/credentials/systemd-sysctl.service
+  /run/credentials/systemd-sysusers.service /run/credentials/systemd-tmpfiles-setup-dev.service
+  /boot /run/credentials/systemd-tmpfiles-setup.service /proc/sys/fs/binfmt_misc /run/user/20110900 "
+mysql_server_id: 8737270
+networking:
+  domain: example.com
+  fqdn: d1-lg.example.com
+  hostname: d1-lg
+  interfaces:
+    eth0:
+      bindings:
+      - address: 10.100.101.33
+        netmask: 255.255.255.0
+        network: 10.100.101.0
+      bindings6:
+      - address: fe80::5054:ff:fee8:1fbb
+        netmask: 'ffff:ffff:ffff:ffff::'
+        network: 'fe80::'
+        scope6: link
+        flags:
+        - permanent
+      duplex: unknown
+      ip: 10.100.101.33
+      ip6: fe80::5054:ff:fee8:1fbb
+      mac: 52:54:00:e8:1f:bb
+      mtu: 1500
+      netmask: 255.255.255.0
+      netmask6: 'ffff:ffff:ffff:ffff::'
+      network: 10.100.101.0
+      network6: 'fe80::'
+      operational_state: up
+      physical: true
+      scope6: link
+      speed: -1
+    eth1:
+      bindings:
+      - address: 10.101.0.13
+        netmask: 255.255.255.0
+        network: 10.101.0.0
+      - address: 193.200.227.100
+      bindings6:
+      - address: fe80::5054:ff:fe84:ad4d
+        netmask: 'ffff:ffff:ffff:ffff::'
+        network: 'fe80::'
+        scope6: link
+        flags:
+        - permanent
+      duplex: unknown
+      ip: 10.101.0.13
+      ip6: fe80::5054:ff:fe84:ad4d
+      mac: 52:54:00:84:ad:4d
+      mtu: 1500
+      netmask: 255.255.255.0
+      netmask6: 'ffff:ffff:ffff:ffff::'
+      network: 10.101.0.0
+      network6: 'fe80::'
+      operational_state: up
+      physical: true
+      scope6: link
+      speed: -1
+    lo:
+      bindings:
+      - address: 127.0.0.1
+        netmask: 255.0.0.0
+        network: 127.0.0.0
+      bindings6:
+      - address: "::1"
+        netmask: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+        network: "::1"
+        scope6: host
+        flags:
+        - permanent
+      ip: 127.0.0.1
+      ip6: "::1"
+      mtu: 65536
+      netmask: 255.0.0.0
+      netmask6: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+      network: 127.0.0.0
+      network6: "::1"
+      operational_state: unknown
+      physical: false
+      scope6: host
+    lo:lg:
+      bindings:
+      - address: 193.200.227.100
+        netmask: 255.255.255.255
+        network: 193.200.227.100
+      ip: 193.200.227.100
+      netmask: 255.255.255.255
+      network: 193.200.227.100
+      physical: false
+    lo:pr-at1-out:
+      bindings:
+      - address: 193.200.227.104
+        netmask: 255.255.255.255
+        network: 193.200.227.104
+      ip: 193.200.227.104
+      netmask: 255.255.255.255
+      network: 193.200.227.104
+      physical: false
+    lo:pr-at2-out:
+      bindings:
+      - address: 193.200.227.105
+        netmask: 255.255.255.255
+        network: 193.200.227.105
+      ip: 193.200.227.105
+      netmask: 255.255.255.255
+      network: 193.200.227.105
+      physical: false
+    lo:pr-ve1-out:
+      bindings:
+      - address: 193.200.227.106
+        netmask: 255.255.255.255
+        network: 193.200.227.106
+      ip: 193.200.227.106
+      netmask: 255.255.255.255
+      network: 193.200.227.106
+      physical: false
+    lo:pr-ve2-out:
+      bindings:
+      - address: 193.200.227.107
+        netmask: 255.255.255.255
+        network: 193.200.227.107
+      ip: 193.200.227.107
+      netmask: 255.255.255.255
+      network: 193.200.227.107
+      physical: false
+    lo:pr-vectra1:
+      bindings:
+      - address: 194.50.135.8
+        netmask: 255.255.255.255
+        network: 194.50.135.8
+      ip: 194.50.135.8
+      netmask: 255.255.255.255
+      network: 194.50.135.8
+      physical: false
+    lo:pr-vectra2:
+      bindings:
+      - address: 194.50.135.9
+        netmask: 255.255.255.255
+        network: 194.50.135.9
+      ip: 194.50.135.9
+      netmask: 255.255.255.255
+      network: 194.50.135.9
+      physical: false
+    lo:redguard:
+      bindings:
+      - address: 194.50.134.9
+        netmask: 255.255.255.255
+        network: 194.50.134.9
+      ip: 194.50.134.9
+      netmask: 255.255.255.255
+      network: 194.50.134.9
+      physical: false
+  ip: 10.101.0.13
+  ip6: fe80::5054:ff:fe84:ad4d
+  mac: 52:54:00:84:ad:4d
+  mtu: 1500
+  netmask: 255.255.255.0
+  netmask6: 'ffff:ffff:ffff:ffff::'
+  network: 10.101.0.0
+  network6: 'fe80::'
+  primary: eth1
+  scope6: link
+new_backup: '1'
+openssl_version: 3.0.19-1~deb12u2
+os:
+  architecture: amd64
+  distro:
+    codename: bookworm
+    description: Debian GNU/Linux 12 (bookworm)
+    id: Debian
+    release:
+      full: '12.8'
+      major: '12'
+      minor: '8'
+  family: Debian
+  hardware: x86_64
+  name: Debian
+  release:
+    full: '12.8'
+    major: '12'
+    minor: '8'
+  selinux:
+    enabled: false
+package_critical_update_count: 42
+package_provider: apt
+package_update_count: 164
+packages_update_security:
+- aide
+- bind9-dnsutils
+- bind9-host
+- bind9-libs
+- dnsutils
+- jq
+- krb5-locales
+- libaprutil1
+- libcups2
+- libdbi-perl
+- libfile-find-rule-perl
+- libfreetype6
+- libgcrypt20
+- libgdk-pixbuf-2.0-0
+- libgdk-pixbuf2.0-common
+- libgnutls-openssl27
+- libgnutls30
+- libgssapi-krb5-2
+- libicu72
+- libjq1
+- libk5crypto3
+- libkrb5-3
+- libkrb5support0
+- liblcms2-2
+- libmodule-scandeps-perl
+- libnghttp2-14
+- libnss3
+- libpng16-16
+- libssl3
+- libtasn1-6
+- libtiff6
+- linux-base
+- needrestart
+- net-tools
+- nginx
+- nginx-common
+- openjdk-17-jdk-headless
+- openjdk-17-jre-headless
+- openssl
+- redis-server
+- redis-tools
+- unzip
+partitions:
+  "/dev/vda1":
+    filesystem: ext2
+    mount: "/boot"
+    parttype: '0x83'
+    partuuid: fae291b3-01
+    size: 487.00 MiB
+    size_bytes: 510656512
+    uuid: b0165f51-4ef4-43a4-adbe-92d45ef95931
+  "/dev/vda2":
+    filesystem: xfs
+    mount: "/"
+    parttype: '0x83'
+    partuuid: fae291b3-02
+    size: 9.52 GiB
+    size_bytes: 10224664576
+    uuid: 76849f80-5c2f-4aa2-9439-8f93b8f17b72
+passengerversion: ''
+path: "/opt/puppetlabs/bin:/bin:/usr/bin:/usr/sbin:/sbin"
+processors:
+  cores: 1
+  count: 4
+  extensions:
+  - unknown
+  isa: unknown
+  models:
+  - Intel(R) Xeon(R) CPU           E5640  @ 2.67GHz
+  - Intel(R) Xeon(R) CPU           E5640  @ 2.67GHz
+  - Intel(R) Xeon(R) CPU           E5640  @ 2.67GHz
+  - Intel(R) Xeon(R) CPU           E5640  @ 2.67GHz
+  physicalcount: 4
+  speed: 2.67 GHz
+  threads: 1
+puppet_client_cert_expiry: '2027-03-02'
+puppet_config_branch: stable
+puppet_config_commit: 1264ed68c0
+puppet_config_source: t2
+puppet_config_version: 2026-08-20_10:43-stable:1264ed68c0-xani
+puppet_environmentpath: "/etc/puppetlabs/code/environments"
+puppet_last_run_failed: 0
+puppet_last_run_time: 1787216336
+puppet_resources_total: 1401
+puppet_server: puppet
+puppet_time_config_retrieval: 31.372620997950435
+puppet_time_total: 77.171502435
+puppet_vardir: "/opt/puppetlabs/puppet/cache"
+puppetmaster_version_last_run: 7.34.0
+puppetversion: 7.34.0
+rails_deployed: false
+realusers: anne,jdoe
+restic_backup: '1'
+rodrev_version: 0.3.0-36-g611c09c
+root_home: "/root"
+ruby:
+  platform: x86_64-linux
+  sitedir: "/opt/puppetlabs/puppet/lib/ruby/site_ruby/2.7.0"
+  version: 2.7.8
+service_interface: eth0
+service_provider: systemd
+service_source_ip: 10.100.101.33
+ssh:
+  dsa:
+    fingerprints:
+      sha1: SSHFP 2 1 06d10bc47c130f9c5cdc9fc916faf30929f12421
+      sha256: SSHFP 2 2 8b2c397e50d52a76a6367177022901b2b1334cd9aab771ec35d727c7f3aef9c2
+    key: AAAAB3NzaC1kc3MAAACBAIjgSTDEIz3cB8jpT/RVvVC5DreK9260noFQ+G1+WMhMefHdnULdvQfaOkL1/NUgQyjcFSeXFvE2yi3zffomyfcyqxxUC5p1aB7wMGdpaYATVEQXf8hYo1rdPOufewj6pTuyvI6iJQ6X6gzFakZfZss1g+bkAU+u4RlKBO6Df8fhAAAAFQCJgAZXL4RxGOe7bN7EFyMyFqMKWwAAAIBsxbXuxhwaznokHNTTkpOv0zAPf0GPHG4hHMjEaFIOC2vdh2f52DELaWeBKBH+rU0IGXVIlKYiE7iFc2J9oseXjAsA2Utfrwe05dxFb+Klv7/zON463xnBLH2oRnaKdpthFqEWYtWyJxcBEQGcRfyLE3P87tqOVDYipb+NTifdBwAAAIASIPguBwL+2Dzu4kHGtU78pDIs6LbdO3//BFqqk5N5BPoK0fUMbYMeiWx0/wkB5VbBVTpUjw20bEoxSx4WfiP0kMlkAgcLeyvph3DnbFYX24G2AwbLeL0dlTfeMo6EhQmvDc24AdisO/QukTd7e6mqkc7PHnCdSLsITffrFvbWgw==
+    type: ssh-dss
+  ecdsa:
+    fingerprints:
+      sha1: SSHFP 3 1 f1f63c23d1b10384a61153ac8c0cd18c07972aec
+      sha256: SSHFP 3 2 229d3cb2cd47645188d0f7dd32bddd2a7523a1617c884446eea5a1df890405cf
+    key: AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPDf8LFpmBrbq5o1TC8uEi9pr1eSZ8ka1+xBFHxqq1TirXkMqe6LI2w9du2wXWNR05AMpj7isBYsNY4ev3KyZNU=
+    type: ecdsa-sha2-nistp256
+  ed25519:
+    fingerprints:
+      sha1: SSHFP 4 1 87eca7552db575ea53d2cc24f98b9da30938e78a
+      sha256: SSHFP 4 2 902b17cab54f15e35cc836f22fae03b7248cd335c4712ad03e69edd61d392911
+    key: AAAAC3NzaC1lZDI1NTE5AAAAIFxlsDmxp43OCsDEH8pkr3w/c7Kv6NjH7ypbSJBc/KOY
+    type: ssh-ed25519
+  rsa:
+    fingerprints:
+      sha1: SSHFP 1 1 38d1b22eed42247c3e37a5a91293cbc56f502c06
+      sha256: SSHFP 1 2 5022dc9a57c8f4991f96c788abf71cb399ac8218081ad914272abdeb7e7ef82f
+    key: AAAAB3NzaC1yc2EAAAADAQABAAABAQChdLWtjQL1AWryvBezCKxntQtxD/oriYG1vgQbyNT+2BEHL8Ln8pCzw0r2oMbrHREFtJPiKSiSUl1mZhmrzMNGeE3YHI81JDsuIzxlGYPxcdSFrtiDCIi8XsnKe1Qkir2Igzf3wLRnOs4PwkW1LCLJxfrsZkdSELBjjPMvES/nd0aubl05HJkyx/4tR3I9yh1orREY7C7RCgXH8u0THf3oE/rZGECcnZpQCT/+I4hrlno7xFnCLviBpGRNk/Y0s4nmU18Q3d1SkImbd0o9O6uBh3qr/aw0SSwsYYwlY1eriU7MmOIh7/o+jF11k8ajUnP0WE/iiUzAYT2dTSVrtxyB
+    type: ssh-rsa
+staging_http_get: curl
+system_uptime:
+  days: 112
+  hours: 2698
+  seconds: 9714132
+  uptime: 112 days
+systemusers: Debian-exim,_apt,_chrony,backup,bacula,bareos,bin,bird,collectd,cron,daemon,elasticsearch,exabgp,games,gnats,haproxy,hauth,iperf3,irc,lg,lgproxy,list,lp,mail,man,memcache,messagebus,mongodb,monitor,nagios,news,nobody,postfix,proxy,puppet,redis,root,sshclient,sshd,sync,sys,systemd-coredump,systemd-network,systemd-resolve,systemd-timesync,tcpdump,tomcat8,uucp,uuidd,victoriametrics,www-data
+timezone: CEST
+users: root,daemon,bin,sys,sync,games,man,lp,mail,news,uucp,proxy,www-data,backup,list,irc,gnats,nobody,systemd-timesync,systemd-network,systemd-resolve,sshd,puppet,monitor,collectd,nagios,anne,jdoe,memcache,bird,lgproxy,lg,bacula,_chrony,redis,messagebus,uuidd,_apt,sshclient,Debian-exim,bareos,tomcat8,exabgp,systemd-coredump,postfix,hauth,tcpdump,iperf3,mongodb,elasticsearch,victoriametrics,cron,haproxy
+virtual: kvm
+vm_host: blade205.example.com
+vpnusers: Debian-exim,_apt,_chrony,backup,bacula,bareos,bin,bird,collectd,cron,daemon,elasticsearch,exabgp,games,gnats,haproxy,hauth,iperf3,irc,lg,lgproxy,list,lp,mail,man,memcache,messagebus,mongodb,monitor,nagios,news,nobody,postfix,proxy,puppet,redis,root,sshclient,sshd,sync,sys,systemd-coredump,systemd-network,systemd-resolve,systemd-timesync,tcpdump,tomcat8,uucp,uuidd,victoriametrics,www-data
+x_os:
+  codename: bookworm
+  distro: debian
+  family: debian
+  id: debian-12
+  version: 12
+x_os_codename: bookworm
+x_os_distro: debian
+x_os_family: debian
+x_os_id: debian-12
+x_os_version: 12
