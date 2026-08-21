@@ -93,9 +93,13 @@ func NewNode(cfg config.Config, nc NodeConfig) (*zerosvc.Node, zerosvc.Transport
 	if err != nil {
 		return nil, nil, fmt.Errorf("can't connect to queue at %s: %s", RedactURL(cfg.MQAddress), err)
 	}
+	// the node starts announcing itself the moment it is built, so its service
+	// map is already being read by that goroutine while we fill it in
+	node.Lock()
 	for name, svc := range nc.Services {
 		node.Services[name] = svc
 	}
+	node.Unlock()
 	return node, tr, nil
 }
 
