@@ -8,7 +8,7 @@ import (
 	"github.com/XANi/go-yamlcfg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // the config file is the only way an operator talks to the daemon, so the

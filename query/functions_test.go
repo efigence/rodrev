@@ -1,10 +1,10 @@
 package query
 
 import (
-	"github.com/glycerine/zygomys/zygo"
+	"github.com/glycerine/zygomys/v6/zygo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 	"testing"
 )
 

@@ -5,7 +5,7 @@ import (
 	"github.com/efigence/rodrev/hvminfo"
 	"github.com/zerosvc/go-zerosvc"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 	"strings"
 	"time"
 )

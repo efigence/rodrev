@@ -2,7 +2,7 @@ package query
 
 import (
 	"fmt"
-	"github.com/glycerine/zygomys/zygo"
+	"github.com/glycerine/zygomys/v6/zygo"
 	"regexp"
 	"sort"
 	"strconv"

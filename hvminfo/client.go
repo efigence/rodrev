@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/pkg/term"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 	"io/ioutil"
 	"os"
 	"time"
