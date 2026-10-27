@@ -1,8 +1,11 @@
 package util
 
 import (
-	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var cert = `
@@ -59,6 +62,24 @@ eTcvlDdT0C50uz39d5Sc1IouCiwpdKNiLJtCxjzExRfwAhXZLBzCD1DEnjUjiQeH
 `
 
 func TestGetCNFromCert(t *testing.T) {
-	cn := GetCNFromCert([]byte(cert))
+	cn, err := GetCNFromCert([]byte(cert))
+	require.NoError(t, err)
 	assert.Equal(t, "cert.example.com", cn)
+}
+
+// client_cert pointing at the key instead of the cert is an easy mistake, and
+// used to end in a nil pointer dereference
+func TestGetCNFromCertErrors(t *testing.T) {
+	keyOnly := cert[:strings.Index(cert, "-----BEGIN CERTIFICATE-----")]
+	_, err := GetCNFromCert([]byte(keyOnly))
+	require.Error(t, err)
+	assert.Equal(t, "no CERTIFICATE block in PEM data, only: PRIVATE KEY", err.Error())
+
+	_, err = GetCNFromCert([]byte("not a pem file"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no PEM data found")
+
+	_, err = GetCNFromCert([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "can not be parsed")
 }

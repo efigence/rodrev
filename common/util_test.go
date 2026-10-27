@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 	"testing"
 	"time"
@@ -199,4 +200,16 @@ func TestMapBytesToTopicTitle(t *testing.T) {
 	assert.NotContains(t, out, "+")
 	assert.NotContains(t, out, "=")
 	assert.Equal(t, "", MapBytesToTopicTitle([]byte{}))
+}
+
+// flag lookups only fail when the flag was never defined, which is a bug in the
+// command, so they panic rather than return
+func TestOrPanic(t *testing.T) {
+	bad := errors.New("flag accessed but not defined")
+	assert.Equal(t, "x", StringOrPanic("x", nil))
+	assert.True(t, BoolOrPanic(true, nil))
+	assert.Equal(t, time.Second, DurationOrPanic(time.Second, nil))
+	assert.Panics(t, func() { StringOrPanic("", bad) })
+	assert.Panics(t, func() { BoolOrPanic(false, bad) })
+	assert.Panics(t, func() { DurationOrPanic(0, bad) })
 }

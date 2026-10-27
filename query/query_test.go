@@ -75,8 +75,21 @@ func TestParse(t *testing.T) {
 		{query: `(fact "nonexistent")`, typ: "nil", boolish: false},
 		// a hash is not a filter, but the REPL still wants to show it
 		{query: `(fact "os")`, typ: "hash", boolish: false},
+		{query: `(fact "count" "deeper")`, typ: "nil", boolish: false},
+		{query: `(fact ["os" "name"])`, typ: "string", boolish: true, val: true, display: `"Debian"`},
+		{query: `(fact "os" "name")`, typ: "string", boolish: true, val: true, display: `"Debian"`},
+		{query: `(regexp (fact "count") "^4$")`, typ: "bool", boolish: true, val: true, display: "true"},
+		{query: `(regex (fact "virtual") "^vm")`, typ: "bool", boolish: true, val: false, display: "false"},
+		{query: `(- 4 4)`, typ: "int", boolish: true, val: false, display: "0"},
+		{query: `""`, typ: "string", boolish: true, val: false, display: `""`},
+		{query: `(/ 3 2.0)`, typ: "float", boolish: false, display: "1.5"},
+		{query: `[1 2]`, typ: "array", boolish: false, display: "[1 2]"},
 		{query: `(fact`, wantErr: true},
 		{query: `(nosuchfunction "x")`, wantErr: true},
+		{query: `(fact)`, wantErr: true},
+		{query: `(fact true)`, wantErr: true},
+		{query: `(fact [])`, wantErr: true},
+		{query: `(regexp "x" "[")`, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
@@ -139,4 +152,18 @@ func TestCompletions(t *testing.T) {
 func TestDataMaps(t *testing.T) {
 	q := testEngine(t)
 	assert.Equal(t, []string{"fact"}, q.DataMaps())
+}
+
+func TestNewQueryEngineNeedsRuntime(t *testing.T) {
+	assert.Panics(t, func() { NewQueryEngine(nil) })
+}
+
+// a query is run on every node of the fleet, so one that never ends must not
+// take a daemon down with it. The limit counts function calls, so this only
+// covers loops that make them: recursion and a call-free `for` are not caught
+func TestParseIterationLimit(t *testing.T) {
+	q := testEngine(t)
+	_, err := q.Parse(`(for [(def i 0) true (set i (+ i 1))] 1)`)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "iterations limit exceeded")
 }

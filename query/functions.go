@@ -30,15 +30,8 @@ func FuzzyCompareFunction(env *zygo.Zlisp, name string, args []zygo.Sexp) (zygo.
 	default:
 		return zygo.SexpNull, fmt.Errorf("%s accepts string as second argument, not %T", name, args[1])
 	}
-	reverse := false
 	switch name {
-	case "regexp":
-		reverse = false
-	case "regex":
-		reverse = false
-	case "rfr/":
-		reverse = true
-
+	case "regexp", "regex":
 	default:
 		return zygo.SexpNull, fmt.Errorf("%s is not a supported function", name)
 	}
@@ -46,11 +39,7 @@ func FuzzyCompareFunction(env *zygo.Zlisp, name string, args []zygo.Sexp) (zygo.
 	if err != nil {
 		return zygo.SexpNull, fmt.Errorf("compiling regexp [%s] failed: %s", arg2, err)
 	}
-	cond := re.MatchString(arg1)
-	if reverse {
-		cond = !cond
-	}
-	return &zygo.SexpBool{Val: cond}, nil
+	return &zygo.SexpBool{Val: re.MatchString(arg1)}, nil
 }
 
 // traverse map[string]interface{} hashes made by yaml-like unmarshallers
@@ -71,7 +60,7 @@ func traverseHash(args []string, hash map[string]interface{}) interface{} {
 			if err != nil {
 				return nil
 			}
-			if iarg+1 > len(v) {
+			if iarg < 0 || iarg+1 > len(v) {
 				return nil
 			} else {
 				if idx == len(args)-1 {
@@ -80,13 +69,9 @@ func traverseHash(args []string, hash map[string]interface{}) interface{} {
 					root = v[iarg]
 				}
 			}
-		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, []byte:
-			if idx == len(args)-1 {
-				return v
-			} else {
-				return nil
-			}
 		default:
+			// a leaf (or something we can't walk) with path left over: the path
+			// does not exist, the leaf is not the answer
 			return nil
 		}
 	}
