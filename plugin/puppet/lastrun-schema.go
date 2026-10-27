@@ -3,7 +3,7 @@ package puppet
 import (
 	"fmt"
 	"github.com/efigence/rodrev/common"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 	"io"
 )
 

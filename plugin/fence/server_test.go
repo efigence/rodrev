@@ -160,3 +160,42 @@ func TestCheckPermissionsWrongTarget(t *testing.T) {
 		assert.True(t, allowed)
 	})
 }
+
+func fenceEvent(t *testing.T, from string, cmd FenceCmd) *zerosvc.Event {
+	t.Helper()
+	ev := zerosvc.Event{NodeName: from, Headers: map[string]any{}}
+	require.NoError(t, ev.Marshal(cmd))
+	return &ev
+}
+
+// none of these may reach the fencing itself: every case is turned away before
+// the command is looked at
+func TestHandleEventRejects(t *testing.T) {
+	t.Run("body that is not a command", func(t *testing.T) {
+		f := testFence(config.FenceConfig{Enabled: true})
+		ev := zerosvc.Event{NodeName: "rf-client-somewhere", Headers: map[string]any{}, Body: []byte{0xff}}
+		err := f.HandleEvent(&ev)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rf-client-somewhere")
+	})
+	t.Run("client without permission", func(t *testing.T) {
+		f := testFence(config.FenceConfig{Enabled: true, Group: "sql"})
+		ev := fenceEvent(t, "rf-client-somewhere", FenceCmd{Command: cmdFence, Node: testFQDN})
+		ev.Headers["fence-group"] = "web"
+		err := f.HandleEvent(ev)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not permitted")
+		assert.Contains(t, err.Error(), testFQDN)
+	})
+	t.Run("request for another node", func(t *testing.T) {
+		f := testFence(config.FenceConfig{Enabled: true, Group: "sql"})
+		ev := fenceEvent(t, "rf-client-somewhere", FenceCmd{Command: cmdFence, Node: "node2.example.com"})
+		ev.Headers["fence-group"] = "sql"
+		assert.Error(t, f.HandleEvent(ev))
+	})
+}
+
+func TestHandleEventUnknownCommand(t *testing.T) {
+	f := testFence(config.FenceConfig{Enabled: true})
+	assert.NoError(t, f.HandleEvent(fenceEvent(t, "rf-client-somewhere", FenceCmd{Command: "reboot-everything"})))
+}

@@ -62,9 +62,12 @@ func Init(cmd *cobra.Command) (config.Config, common.Runtime) {
 	if len(cfg.ClientCert) > 0 {
 		cert, err := ioutil.ReadFile(cfg.ClientCert)
 		if err != nil {
-			log.Panicf("could not load cert %s: %w", cfg.ClientCert, err)
+			log.Panicf("could not load cert %s: %s", cfg.ClientCert, err)
 		}
-		certname = util.GetCNFromCert(cert)
+		certname, err = util.GetCNFromCert(cert)
+		if err != nil {
+			log.Panicf("could not get CN from cert %s: %s", cfg.ClientCert, err)
+		}
 	}
 	if len(certname) == 0 {
 		log.Infof("config: %s", cfg.GetConfigPath())

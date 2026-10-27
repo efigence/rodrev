@@ -3,21 +3,34 @@ package util
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"log"
+	"fmt"
+	"strings"
 )
 
-func GetCNFromCert(certRaw []byte) string {
-	block, rest := pem.Decode(certRaw)
-	if block == nil {
-		log.Fatal("failed to parse PEM block containing the certificate")
-	}
-	for block.Type != "CERTIFICATE" && block != nil {
+// GetCNFromCert returns the CN of the first certificate in PEM data. The data
+// can carry other blocks too (a key bundled with its cert is common), those
+// are skipped
+func GetCNFromCert(certRaw []byte) (string, error) {
+	var found []string
+	rest := certRaw
+	for {
+		var block *pem.Block
 		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			found = append(found, block.Type)
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return "", fmt.Errorf("CERTIFICATE block can not be parsed: %s", err)
+		}
+		return cert.Subject.CommonName, nil
 	}
-
-	cert, err := x509.ParseCertificate(block.Bytes) // handle error
-	if err != nil {
-		log.Fatalf("error decoding PEM cert: %s", err)
+	if len(found) == 0 {
+		return "", fmt.Errorf("no PEM data found, expected a CERTIFICATE block")
 	}
-	return cert.Subject.CommonName
+	return "", fmt.Errorf("no CERTIFICATE block in PEM data, only: %s", strings.Join(found, ", "))
 }

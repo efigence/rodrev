@@ -8,7 +8,7 @@ import (
 	"github.com/XANi/go-yamlcfg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // the config file is the only way an operator talks to the daemon, so the
@@ -135,4 +135,21 @@ func TestSetConfigPath(t *testing.T) {
 	assert.Equal(t, "", cfg.GetConfigPath())
 	cfg.SetConfigPath("/etc/rodrev/server.conf")
 	assert.Equal(t, "/etc/rodrev/server.conf", cfg.GetConfigPath())
+}
+
+func TestValidate(t *testing.T) {
+	t.Run("missing node_meta gets the fqdn", func(t *testing.T) {
+		var c Config
+		c.Validate()
+		require.NotNil(t, c.NodeMeta)
+		assert.NotEmpty(t, c.NodeMeta["fqdn"])
+	})
+	// queries match on (-> node %fqdn), so a configured one must win over the
+	// one the host reports
+	t.Run("configured fqdn is kept", func(t *testing.T) {
+		c := Config{NodeMeta: map[string]interface{}{"fqdn": "d1-puppet1.example.com", "site": "dc1"}}
+		c.Validate()
+		assert.Equal(t, "d1-puppet1.example.com", c.NodeMeta["fqdn"])
+		assert.Equal(t, "dc1", c.NodeMeta["site"])
+	})
 }

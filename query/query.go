@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 	"github.com/efigence/rodrev/common"
-	"github.com/glycerine/zygomys/zygo"
+	"github.com/glycerine/zygomys/v6/zygo"
 	"sort"
 )
 
@@ -78,7 +78,7 @@ func (e *Engine) Parse(q string) (Result, error) {
 	var res Result
 	vars := e.r.Cfg.NodeMeta
 	zg := e.newSandbox()
-	defer zg.Stop() // else it WILL leak memory - it uses goroutines underneath
+	defer zg.Close() // else it WILL leak memory - it uses goroutines underneath
 	varsLisp, err := zygo.GoToSexp(vars, zg)
 	if err != nil {
 		return res, err
@@ -156,7 +156,7 @@ func (e *Engine) ParseBool(q string) (bool, error) {
 // where a string was expected) can only be reported by the node itself
 func CheckSyntax(q string) error {
 	zg := zygo.NewZlispSandbox()
-	defer zg.Stop() // else it WILL leak memory - it uses goroutines underneath
+	defer zg.Close() // else it WILL leak memory - it uses goroutines underneath
 	zg.ImportRegex()
 	zg.ImportRandom()
 	if err := zg.LoadString(q); err != nil {

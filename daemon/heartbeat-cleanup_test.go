@@ -224,3 +224,21 @@ func TestJittered(t *testing.T) {
 	assert.Equal(t, week, jittered(rng, week, 0), "no spread means no change")
 	assert.Equal(t, time.Duration(0), jittered(rng, 0, intervalSpread))
 }
+
+// the cleanup must never remove the presence of the node doing it
+func TestPresenceTopic(t *testing.T) {
+	d := Daemon{prefix: "rv/", node: &zerosvc.Node{Name: "node1.example.com", UUID: "u-1"}}
+	assert.Equal(t, "rv/discovery/node1.example.com/u-1", d.presenceTopic())
+}
+
+func TestDryRunNote(t *testing.T) {
+	assert.Contains(t, dryRunNote(true), "dry run")
+	assert.Empty(t, dryRunNote(false))
+}
+
+func TestJitteredNeverGoesNegative(t *testing.T) {
+	rng := rand.New(rand.NewSource(1))
+	for i := 0; i < 100; i++ {
+		assert.Greater(t, jittered(rng, time.Minute, 5), time.Duration(0))
+	}
+}
